@@ -1,0 +1,190 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum LocationKind {
+  ROOM    @map("room")
+  STORAGE @map("storage")
+
+  @@map("location_kind")
+}
+
+enum AssetStatus {
+  AVAILABLE @map("available")
+  IN_USE    @map("in_use")
+  MISSING   @map("missing")
+  IN_REPAIR @map("in_repair")
+  RETIRED   @map("retired")
+
+  @@map("asset_status")
+}
+
+enum AssetEventType {
+  ASSET_CREATED         @map("asset_created")
+  ASSET_UPDATED         @map("asset_updated")
+  MOVED                 @map("moved")
+  CHECKED_OUT           @map("checked_out")
+  RETURNED              @map("returned")
+  MARKED_MISSING        @map("marked_missing")
+  MARKED_IN_REPAIR      @map("marked_in_repair")
+  RESTORED_TO_AVAILABLE @map("restored_to_available")
+  RETIRED               @map("retired")
+  AUDIT_STARTED         @map("audit_started")
+  AUDIT_SCANNED         @map("audit_scanned")
+  AUDIT_COMPLETED       @map("audit_completed")
+
+  @@map("asset_event_type")
+}
+
+enum AuditStatus {
+  IN_PROGRESS @map("in_progress")
+  COMPLETED   @map("completed")
+  CANCELLED   @map("cancelled")
+
+  @@map("audit_status")
+}
+
+enum AuditResultType {
+  EXPECTED_FOUND   @map("expected_found")
+  UNEXPECTED_FOUND @map("unexpected_found")
+  DUPLICATE_SCAN   @map("duplicate_scan")
+
+  @@map("audit_result_type")
+}
+
+model AssetType {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  prefix      String   @unique
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  assets Asset[]
+
+  @@map("asset_types")
+}
+
+model Location {
+  id          String       @id @default(cuid())
+  name        String       @unique
+  kind        LocationKind
+  description String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  homeAssets     Asset[]        @relation("AssetHomeLocation")
+  currentAssets  Asset[]        @relation("AssetCurrentLocation")
+  eventsFrom     AssetEvent[]   @relation("EventFromLocation")
+  eventsTo       AssetEvent[]   @relation("EventToLocation")
+  auditSessions  AuditSession[]
+
+  @@map("locations")
+}
+
+model Asset {
+  id                String      @id @default(cuid())
+  assetId           String      @unique
+  name              String
+  assetTypeId       String
+  serialNumber      String?
+  purchaseDate      DateTime?
+  cost              Decimal?    @db.Decimal(10, 2)
+  consumable        Boolean     @default(false)
+  homeLocationId    String
+  currentLocationId String
+  status            AssetStatus @default(AVAILABLE)
+  notes             String?
+  referenceImageUrl String?
+  qrCodeToken       String      @unique @default(cuid())
+  qrCodeGeneratedAt DateTime    @default(now())
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  assetType       AssetType   @relation(fields: [assetTypeId], references: [id], onDelete: Restrict)
+  homeLocation    Location    @relation("AssetHomeLocation", fields: [homeLocationId], references: [id], onDelete: Restrict)
+  currentLocation Location    @relation("AssetCurrentLocation", fields: [currentLocationId], references: [id], onDelete: Restrict)
+  events          AssetEvent[]
+  auditScans      AuditScan[]
+
+  @@index([assetTypeId])
+  @@index([homeLocationId])
+  @@index([currentLocationId])
+  @@index([status])
+  @@map("assets")
+}
+
+model AssetEvent {
+  id             String          @id @default(cuid())
+  assetId        String?
+  eventType      AssetEventType
+  fromLocationId String?
+  toLocationId   String?
+  previousStatus AssetStatus?
+  newStatus      AssetStatus?
+  handledBy      String?
+  remarks        String?
+  metadata       Json?
+  createdAt      DateTime        @default(now())
+
+  asset        Asset?    @relation(fields: [assetId], references: [id], onDelete: Restrict)
+  fromLocation Location? @relation("EventFromLocation", fields: [fromLocationId], references: [id], onDelete: Restrict)
+  toLocation   Location? @relation("EventToLocation", fields: [toLocationId], references: [id], onDelete: Restrict)
+
+  @@index([assetId])
+  @@index([eventType])
+  @@index([fromLocationId])
+  @@index([toLocationId])
+  @@index([handledBy])
+  @@index([createdAt])
+  @@map("asset_events")
+}
+
+model AuditSession {
+  id          String      @id @default(cuid())
+  locationId  String
+  startedBy   String?
+  startedAt   DateTime    @default(now())
+  completedAt DateTime?
+  status      AuditStatus @default(IN_PROGRESS)
+  notes       String?
+
+  location Location    @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  scans    AuditScan[]
+
+  @@index([locationId])
+  @@index([status])
+  @@map("audit_sessions")
+}
+
+model AuditScan {
+  id             String          @id @default(cuid())
+  auditSessionId String
+  assetId        String
+  resultType     AuditResultType
+  scannedAt      DateTime        @default(now())
+
+  auditSession AuditSession @relation(fields: [auditSessionId], references: [id], onDelete: Cascade)
+  asset        Asset        @relation(fields: [assetId], references: [id], onDelete: Restrict)
+
+  @@index([auditSessionId])
+  @@index([assetId])
+  @@map("audit_scans")
+}
+
+model AppUser {
+  id        String   @id @default(cuid())
+  name      String
+  email     String?  @unique
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive])
+  @@map("app_users")
+}
