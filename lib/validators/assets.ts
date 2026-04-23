@@ -64,6 +64,13 @@ export const assetActionSchema = z.object({
   remarks: optionalString,
 });
 
+export const scanAssetActionSchema = z.object({
+  action: z.enum(['checkout', 'return']),
+  toLocationId: optionalString,
+  handledBy: optionalString,
+  remarks: optionalString,
+});
+
 export const listAssetsSchema = z.object({
   assetTypeId: optionalString,
   status: statusSchema.optional(),
@@ -97,7 +104,7 @@ export const scanAuditSchema = z.object({
 
 export const batchActionSchema = z.object({
   assetIds: z.array(z.string().trim().min(1)).min(1, 'Select at least one asset'),
-  action: z.enum(['checkout', 'return', 'move']),
+  action: z.enum(['checkout', 'return']),
   toLocationId: optionalString,
   handledBy: optionalString,
   remarks: optionalString,

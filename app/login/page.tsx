@@ -2,7 +2,8 @@
 
 import { FormEvent, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Package, LockKeyhole } from 'lucide-react';
+import { LockKeyhole } from 'lucide-react';
+import { AppLogo } from '@/components/shared/app-logo';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -44,9 +45,7 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,_rgba(121,27,27,0.12),_transparent_35%),linear-gradient(180deg,_hsl(var(--background)),_hsl(var(--muted)/0.55))] p-4 sm:p-6">
       <Card className="w-full max-w-md border-border/70 shadow-lg">
         <CardHeader className="space-y-4 text-center">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm">
-            <Package className="h-7 w-7" />
-          </div>
+          <AppLogo className="mx-auto h-16 w-28 sm:h-20 sm:w-36" priority />
           <div className="space-y-1">
             <CardTitle className="text-2xl">ZIL Asset Manager</CardTitle>
             <CardDescription>Sign in with the credentials configured for this deployment.</CardDescription>

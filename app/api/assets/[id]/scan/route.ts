@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { applyAssetAction } from '@/lib/services/assets';
-import { assetActionSchema } from '@/lib/validators/assets';
+import { scanAssetActionSchema } from '@/lib/validators/assets';
 
 export const runtime = 'nodejs';
 
@@ -14,7 +14,7 @@ export async function POST(
 ) {
   const { id } = await params;
   const body = await request.json();
-  const parsed = assetActionSchema.safeParse(body);
+  const parsed = scanAssetActionSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }

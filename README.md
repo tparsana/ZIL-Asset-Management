@@ -7,7 +7,7 @@ Operational asset tracking for the Zoom Innovation Lab. Built with Next.js 16, R
 - Asset inventory with asset types, serials, purchase metadata, consumable tracking, home location, current location, and status.
 - Immutable event log for creates, updates, moves, checkouts, returns, missing/repair transitions, retirements, and audits.
 - Location tracking for Room 140, Room 135, Room 134, Room 133, ZIL Store, and Upstairs Storage.
-- Backend-connected dashboard, inventory, location, history, scan, batch scan, audit, and settings workflows.
+- Backend-connected dashboard, inventory, location, history, scan, audit, and settings workflows.
 - App-generated QR codes for each asset, including download/regenerate controls and camera QR scanning.
 
 ## Environment
@@ -54,7 +54,6 @@ No fake assets are seeded.
 | --- | --- | --- |
 | Dashboard | `/` | Operational counts, recent activity, location summary |
 | Scan Asset | `/scan` | Asset lookup and single-asset mutations |
-| Batch Scan | `/batch-scan` | Multi-asset actions with separate event entries |
 | Inventory | `/inventory` | Searchable/filterable asset catalog |
 | Asset Details | `/assets/[id]` | Asset details and history |
 | History | `/history` | Immutable event log |
@@ -63,7 +62,7 @@ No fake assets are seeded.
 | Login | `/login` | Shared device login gate |
 | Settings | `/settings` | Add assets, manage asset types, locations, and users |
 
-`/batch` redirects to `/batch-scan` for compatibility.
+Batch add is built into `/scan`. Legacy `/batch` and `/batch-scan` routes redirect to `/scan`.
 
 ## Development
 

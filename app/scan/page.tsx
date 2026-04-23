@@ -25,25 +25,15 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import type { Asset, Location, AppUser } from '@/lib/types';
-import {
-  AlertTriangle,
-  ArrowRightLeft,
-  CheckCircle,
-  LogIn,
-  LogOut,
-  Wrench,
-} from 'lucide-react';
+import type { AppUser, Asset, Location } from '@/lib/types';
+import { Layers, LogIn, LogOut, X } from 'lucide-react';
 
-type ActionModalType = 'checkout' | 'return' | 'move' | 'missing' | 'in-repair' | 'available' | null;
+type ActionModalType = 'checkout' | 'return' | null;
+const TEMP_USE_ROOMS = ['Room 133', 'Room 134', 'Room 135', 'Room 140'] as const;
 
-const actionCopy: Record<Exclude<ActionModalType, null>, { title: string; confirm: string; needsLocation?: boolean; variant?: 'default' | 'destructive' }> = {
-  checkout: { title: 'Mark In Use', confirm: 'Confirm In Use', needsLocation: true },
+const actionCopy: Record<Exclude<ActionModalType, null>, { title: string; confirm: string; needsLocation?: boolean }> = {
+  checkout: { title: 'Check Out for Temporary Use', confirm: 'Check Out Asset', needsLocation: true },
   return: { title: 'Return to Home Location', confirm: 'Confirm Return' },
-  move: { title: 'Move Asset', confirm: 'Confirm Move', needsLocation: true },
-  missing: { title: 'Mark Missing', confirm: 'Mark Missing', variant: 'destructive' },
-  'in-repair': { title: 'Mark In Repair', confirm: 'Mark In Repair' },
-  available: { title: 'Restore to Available', confirm: 'Restore Available' },
 };
 
 export default function ScanPage() {
@@ -51,6 +41,8 @@ export default function ScanPage() {
   const [users, setUsers] = useState<AppUser[]>([]);
   const [assetCode, setAssetCode] = useState('');
   const [scannedAsset, setScannedAsset] = useState<Asset | null>(null);
+  const [batchAssets, setBatchAssets] = useState<Asset[]>([]);
+  const [batchMode, setBatchMode] = useState(false);
   const [actionModal, setActionModal] = useState<ActionModalType>(null);
   const [selectedLocation, setSelectedLocation] = useState('');
   const [handledBy, setHandledBy] = useState('');
@@ -66,24 +58,50 @@ export default function ScanPage() {
       if (locationsResponse.ok) setLocations((await locationsResponse.json()).locations);
       if (usersResponse.ok) setUsers((await usersResponse.json()).users);
     }
+
     loadReferenceData();
   }, []);
+
+  const checkoutRooms = locations.filter((location) =>
+    TEMP_USE_ROOMS.includes(location.name as (typeof TEMP_USE_ROOMS)[number])
+  );
+  const canCheckout = scannedAsset?.status === 'available';
+  const canReturn = scannedAsset?.status === 'in-use';
+  const batchAllAvailable = batchAssets.length > 0 && batchAssets.every((asset) => asset.status === 'available');
+  const batchAllInUse = batchAssets.length > 0 && batchAssets.every((asset) => asset.status === 'in-use');
+
+  async function fetchAssetByCode(code: string) {
+    const response = await fetch('/api/assets/lookup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ value: code.trim() }),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Asset not found');
+    return data.asset as Asset;
+  }
 
   async function lookupAsset(code: string) {
     if (!code.trim()) return;
     setLoading(true);
     try {
-      const response = await fetch('/api/assets/lookup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ value: code.trim() }),
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Asset not found');
-      setScannedAsset(data.asset);
-      setAssetCode(data.asset.assetId);
+      const asset = await fetchAssetByCode(code);
+
+      if (batchMode) {
+        setBatchAssets((current) => {
+          if (current.some((item) => item.id === asset.id)) {
+            toast.info('Asset is already in this batch');
+            return current;
+          }
+          return [...current, asset];
+        });
+        setAssetCode('');
+      } else {
+        setScannedAsset(asset);
+        setAssetCode(asset.assetId);
+      }
     } catch (error) {
-      setScannedAsset(null);
+      if (!batchMode) setScannedAsset(null);
       toast.error(error instanceof Error ? error.message : 'Asset lookup failed');
     } finally {
       setLoading(false);
@@ -98,44 +116,85 @@ export default function ScanPage() {
   }
 
   async function confirmAction() {
-    if (!scannedAsset || !actionModal) return;
-    const config = actionCopy[actionModal];
-    if (config.needsLocation && !selectedLocation) {
-      toast.error('Destination location is required');
+    if (!actionModal) return;
+
+    if (actionCopy[actionModal].needsLocation && !selectedLocation) {
+      toast.error(batchMode ? 'Select the room where these assets will be used' : 'Select the room where this asset will be used');
       return;
     }
 
     setLoading(true);
     try {
-      const response = await fetch(`/api/assets/${encodeURIComponent(scannedAsset.id)}/scan`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: actionModal,
-          toLocationId: selectedLocation,
-          handledBy,
-          remarks,
-        }),
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Failed to update asset');
-      setScannedAsset(data.asset);
+      if (batchMode) {
+        const response = await fetch('/api/batch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            assetIds: batchAssets.map((asset) => asset.id),
+            action: actionModal,
+            toLocationId: selectedLocation,
+            handledBy,
+            remarks,
+          }),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Failed to update assets');
+        setBatchAssets([]);
+      } else {
+        if (!scannedAsset) return;
+
+        const response = await fetch(`/api/assets/${encodeURIComponent(scannedAsset.id)}/scan`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: actionModal,
+            toLocationId: selectedLocation,
+            handledBy,
+            remarks,
+          }),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Failed to update asset');
+        setScannedAsset(data.asset);
+      }
+
       setActionModal(null);
-      toast.success('Asset updated');
+      toast.success(batchMode ? 'Assets updated' : 'Asset updated');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to update asset');
+      toast.error(error instanceof Error ? error.message : batchMode ? 'Failed to update assets' : 'Failed to update asset');
     } finally {
       setLoading(false);
     }
+  }
+
+  function toggleBatchMode() {
+    setBatchMode((current) => !current);
+    setActionModal(null);
+    setSelectedLocation('');
+    setHandledBy('');
+    setRemarks('');
+    setAssetCode('');
+    setScannedAsset(null);
+    setBatchAssets([]);
   }
 
   return (
     <div className="space-y-6 p-4 sm:p-5 lg:p-6">
       <div className="space-y-3">
         <BackButton fallbackHref="/" />
-        <div>
-          <h1 className="text-2xl font-bold text-balance sm:text-3xl">Scan Asset</h1>
-          <p className="text-muted-foreground mt-2">Scan or manually enter an asset ID to view and manage equipment</p>
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-balance sm:text-3xl">Scan Asset</h1>
+            <p className="text-muted-foreground mt-2">
+              {batchMode
+                ? 'Scan multiple asset IDs to build a batch for temporary checkout or return.'
+                : 'Scan or enter an asset ID to check out for use or return to the home location.'}
+            </p>
+          </div>
+          <Button variant={batchMode ? 'default' : 'outline'} onClick={toggleBatchMode} className="w-full sm:w-auto">
+            <Layers className="mr-2 h-4 w-4" />
+            {batchMode ? 'Exit Batch Add' : 'Batch Add'}
+          </Button>
         </div>
       </div>
 
@@ -146,13 +205,90 @@ export default function ScanPage() {
             manualValue={assetCode}
             onManualValueChange={setAssetCode}
             onManualSubmit={lookupAsset}
+            manualButtonLabel={batchMode ? 'Add' : 'Lookup'}
             manualDisabled={loading}
-            helpText="Use the camera when possible, or enter an asset ID if a tag is unreadable."
+            helpText={
+              batchMode
+                ? 'Use the camera when possible, or enter asset IDs manually to add multiple items to the same temporary-use action.'
+                : 'Use the camera when possible, or enter an asset ID to check equipment out for use or return it home.'
+            }
           />
         </div>
 
         <div className="space-y-4">
-          {scannedAsset ? (
+          {batchMode ? (
+            <>
+              <Card className="overflow-hidden">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Selected Assets ({batchAssets.length})</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {batchAssets.length > 0 ? (
+                    <div className="space-y-3">
+                      <div className="max-h-80 space-y-2 overflow-y-auto pr-2">
+                        {batchAssets.map((asset) => (
+                          <div key={asset.id} className="flex items-center justify-between gap-3 rounded-lg border bg-muted/35 p-3">
+                            <div className="flex min-w-0 items-center gap-3">
+                              <AssetThumbnail src={asset.referenceImageUrl} alt={asset.name} className="h-12 w-12 rounded-lg" />
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-medium">{asset.name}</p>
+                                <p className="truncate text-xs text-muted-foreground">
+                                  {asset.assetId} · {asset.currentLocation.name}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <StatusBadge status={asset.status} size="sm" />
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => setBatchAssets((current) => current.filter((item) => item.id !== asset.id))}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <Button variant="outline" className="w-full" onClick={() => setBatchAssets([])}>
+                        Clear Selected Assets
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-12 text-center">
+                      <AssetThumbnail alt="No assets selected" className="mb-4 h-16 w-16 rounded-full" />
+                      <h3 className="text-lg font-semibold">No Assets Selected</h3>
+                      <p className="mt-2 text-muted-foreground">
+                        Scan or enter asset IDs to build a batch for checkout or return.
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <Button
+                  variant="outline"
+                  className="h-auto py-4 flex flex-col gap-1"
+                  onClick={() => openAction('checkout')}
+                  disabled={!batchAllAvailable}
+                >
+                  <LogOut className="h-5 w-5" />
+                  <span className="text-sm">Check Out</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  className="h-auto py-4 flex flex-col gap-1"
+                  onClick={() => openAction('return')}
+                  disabled={!batchAllInUse}
+                >
+                  <LogIn className="h-5 w-5" />
+                  <span className="text-sm">Return</span>
+                </Button>
+              </div>
+            </>
+          ) : scannedAsset ? (
             <>
               <Card>
                 <CardContent className="p-4">
@@ -173,53 +309,40 @@ export default function ScanPage() {
                         {scannedAsset.serialNumber && <div><span className="text-muted-foreground">Serial:</span> {scannedAsset.serialNumber}</div>}
                       </div>
                       {scannedAsset.notes && (
-                        <p className="mt-3 text-sm text-muted-foreground bg-muted/50 rounded-lg p-2">{scannedAsset.notes}</p>
+                        <p className="mt-3 rounded-lg bg-muted/50 p-2 text-sm text-muted-foreground">{scannedAsset.notes}</p>
                       )}
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base">Available Actions</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                    <Button variant="outline" className="h-auto py-3 flex flex-col gap-1" onClick={() => openAction('checkout')}>
-                      <LogOut className="h-5 w-5" />
-                      <span className="text-xs">Mark In Use</span>
-                    </Button>
-                    <Button variant="outline" className="h-auto py-3 flex flex-col gap-1" onClick={() => openAction('move')}>
-                      <ArrowRightLeft className="h-5 w-5" />
-                      <span className="text-xs">Move</span>
-                    </Button>
-                    <Button variant="outline" className="h-auto py-3 flex flex-col gap-1" onClick={() => openAction('return')}>
-                      <LogIn className="h-5 w-5" />
-                      <span className="text-xs">Return</span>
-                    </Button>
-                    <Button variant="outline" className="h-auto py-3 flex flex-col gap-1" onClick={() => openAction('missing')}>
-                      <AlertTriangle className="h-5 w-5" />
-                      <span className="text-xs">Mark Missing</span>
-                    </Button>
-                    <Button variant="outline" className="h-auto py-3 flex flex-col gap-1" onClick={() => openAction('in-repair')}>
-                      <Wrench className="h-5 w-5" />
-                      <span className="text-xs">In Repair</span>
-                    </Button>
-                    <Button variant="outline" className="h-auto py-3 flex flex-col gap-1" onClick={() => openAction('available')}>
-                      <CheckCircle className="h-5 w-5" />
-                      <span className="text-xs">Available</span>
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <Button
+                  variant="outline"
+                  className="h-auto py-4 flex flex-col gap-1"
+                  onClick={() => openAction('checkout')}
+                  disabled={!canCheckout}
+                >
+                  <LogOut className="h-5 w-5" />
+                  <span className="text-sm">Check Out</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  className="h-auto py-4 flex flex-col gap-1"
+                  onClick={() => openAction('return')}
+                  disabled={!canReturn}
+                >
+                  <LogIn className="h-5 w-5" />
+                  <span className="text-sm">Return</span>
+                </Button>
+              </div>
             </>
           ) : (
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-                <AssetThumbnail alt="No asset loaded" className="h-16 w-16 rounded-full mb-4" />
-                <h3 className="font-semibold text-lg">No Asset Loaded</h3>
-                <p className="text-muted-foreground mt-2">Enter an asset ID or scan a QR code to take action</p>
+                <AssetThumbnail alt="No asset loaded" className="mb-4 h-16 w-16 rounded-full" />
+                <h3 className="text-lg font-semibold">No Asset Loaded</h3>
+                <p className="mt-2 text-muted-foreground">Enter an asset ID or scan a QR code to check it out for use or return it home.</p>
               </CardContent>
             </Card>
           )}
@@ -229,17 +352,27 @@ export default function ScanPage() {
       <Dialog open={actionModal !== null} onOpenChange={(open) => !open && setActionModal(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{actionModal ? actionCopy[actionModal].title : 'Update Asset'}</DialogTitle>
-            <DialogDescription>{scannedAsset ? `${scannedAsset.name} (${scannedAsset.assetId})` : 'Select an asset first'}</DialogDescription>
+            <DialogTitle>{actionModal ? actionCopy[actionModal].title : batchMode ? 'Update Assets' : 'Update Asset'}</DialogTitle>
+            <DialogDescription>
+              {batchMode
+                ? `${batchAssets.length} selected asset${batchAssets.length === 1 ? '' : 's'}`
+                : scannedAsset
+                  ? `${scannedAsset.name} (${scannedAsset.assetId})`
+                  : 'Select an asset first'}
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             {actionModal && actionCopy[actionModal].needsLocation && (
               <div className="space-y-2">
-                <label className="text-sm font-medium">Destination Location</label>
+                <label className="text-sm font-medium">Room In Use</label>
                 <Select value={selectedLocation} onValueChange={setSelectedLocation}>
-                  <SelectTrigger><SelectValue placeholder="Select location" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="Select room" /></SelectTrigger>
                   <SelectContent>
-                    {locations.map((location) => <SelectItem key={location.id} value={location.id}>{location.name}</SelectItem>)}
+                    {checkoutRooms.map((location) => (
+                      <SelectItem key={location.id} value={location.id}>
+                        {location.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -258,11 +391,7 @@ export default function ScanPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setActionModal(null)}>Cancel</Button>
-            <Button
-              onClick={confirmAction}
-              disabled={loading}
-              variant={actionModal && actionCopy[actionModal].variant === 'destructive' ? 'destructive' : 'default'}
-            >
+            <Button onClick={confirmAction} disabled={loading}>
               {actionModal ? actionCopy[actionModal].confirm : 'Confirm'}
             </Button>
           </DialogFooter>

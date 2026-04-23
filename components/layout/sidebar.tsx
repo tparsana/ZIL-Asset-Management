@@ -3,12 +3,12 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
+import { AppLogo } from '@/components/shared/app-logo';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Home,
   Scan,
-  Layers,
   Package,
   History,
   MapPin,
@@ -25,7 +25,6 @@ interface SidebarProps {
 const navItems = [
   { href: '/', label: 'Dashboard', icon: Home },
   { href: '/scan', label: 'Scan Asset', icon: Scan },
-  { href: '/batch-scan', label: 'Batch Scan', icon: Layers },
   { href: '/inventory', label: 'Inventory', icon: Package },
   { href: '/history', label: 'History', icon: History },
   { href: '/locations', label: 'Locations', icon: MapPin },
@@ -44,13 +43,8 @@ export function Sidebar({ className, onClose }: SidebarProps) {
       {/* Logo */}
       <div className="flex h-16 items-center justify-between px-4 border-b border-border">
         <Link href="/" className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-            <Package className="h-4 w-4 text-primary-foreground" />
-          </div>
-          <div className="flex flex-col">
-            <span className="font-semibold text-sm leading-none">ZIL Assets</span>
-            <span className="text-xs text-muted-foreground leading-none mt-0.5">Asset Manager</span>
-          </div>
+          <AppLogo className="h-10 w-16 shrink-0" priority />
+          <span className="text-base font-semibold leading-none">Assets Manager</span>
         </Link>
         {onClose && (
           <Button variant="ghost" size="icon" onClick={onClose} className="lg:hidden">

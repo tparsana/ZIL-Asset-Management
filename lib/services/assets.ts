@@ -17,6 +17,7 @@ import type {
 } from '@/lib/validators/assets';
 
 type Tx = Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'>;
+const TEMP_USE_ROOM_NAMES = new Set(['Room 133', 'Room 134', 'Room 135', 'Room 140']);
 
 function normalizeAssetId(assetId: string) {
   return assetId.trim().toUpperCase();
@@ -243,6 +244,25 @@ export async function applyAssetAction(id: string, input: z.infer<typeof assetAc
       throw new Error('Destination location is required');
     }
 
+    if (input.action === 'checkout') {
+      if (current.status !== DbAssetStatus.AVAILABLE) {
+        throw new Error('Only available assets can be checked out from the scan workflow');
+      }
+
+      const location = await tx.location.findUnique({
+        where: { id: input.toLocationId },
+        select: { id: true, name: true },
+      });
+
+      if (!location || !TEMP_USE_ROOM_NAMES.has(location.name)) {
+        throw new Error('Check out requires one of Room 133, Room 134, Room 135, or Room 140');
+      }
+    }
+
+    if (input.action === 'return' && current.status !== DbAssetStatus.IN_USE) {
+      throw new Error('Only in-use assets can be returned from the scan workflow');
+    }
+
     const nextState = nextStateForAction(input.action, current, input.toLocationId);
     const asset = await tx.asset.update({
       where: { id: current.id },
@@ -269,7 +289,7 @@ export async function applyAssetAction(id: string, input: z.infer<typeof assetAc
 
 export async function applyBatchAction(input: {
   assetIds: string[];
-  action: 'checkout' | 'return' | 'move';
+  action: 'checkout' | 'return';
   toLocationId?: string;
   handledBy?: string;
   remarks?: string;
