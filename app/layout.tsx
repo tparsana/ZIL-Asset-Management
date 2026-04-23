@@ -1,7 +1,9 @@
 import type { Metadata } from 'next'
+import { cookies } from 'next/headers'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { AppShell } from '@/components/layout/app-shell'
+import { AUTH_COOKIE_NAME, verifySessionToken } from '@/lib/auth'
 import { ThemeProvider } from '@/components/theme-provider'
 import { Toaster } from '@/components/ui/sonner'
 import './globals.css'
@@ -32,16 +34,19 @@ export const metadata: Metadata = {
   },
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const cookieStore = await cookies();
+  const session = await verifySessionToken(cookieStore.get(AUTH_COOKIE_NAME)?.value);
+
   return (
     <html lang="en" className="bg-background" suppressHydrationWarning>
       <body className="font-sans antialiased min-h-screen">
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-          <AppShell>{children}</AppShell>
+          <AppShell sessionEmail={session?.email ?? null}>{children}</AppShell>
           <Toaster richColors />
         </ThemeProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}

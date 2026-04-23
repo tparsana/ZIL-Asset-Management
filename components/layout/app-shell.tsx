@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { Sidebar } from './sidebar';
 import { MobileNav } from './mobile-nav';
 import { Header } from './header';
@@ -8,10 +9,17 @@ import { cn } from '@/lib/utils';
 
 interface AppShellProps {
   children: React.ReactNode;
+  sessionEmail?: string | null;
 }
 
-export function AppShell({ children }: AppShellProps) {
+export function AppShell({ children, sessionEmail }: AppShellProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const pathname = usePathname();
+  const isAuthScreen = pathname === '/login' || pathname === '/auth';
+
+  if (isAuthScreen) {
+    return <div className="min-h-screen bg-background">{children}</div>;
+  }
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-background">
@@ -36,7 +44,7 @@ export function AppShell({ children }: AppShellProps) {
 
       {/* Main Content */}
       <div className="min-w-0 lg:pl-64">
-        <Header onMenuClick={() => setSidebarOpen(true)} />
+        <Header onMenuClick={() => setSidebarOpen(true)} sessionEmail={sessionEmail} />
         <main className="min-h-[calc(100vh-4rem)] pb-20 lg:pb-6">
           {children}
         </main>

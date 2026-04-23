@@ -1,5 +1,7 @@
 'use client';
 
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Menu, Bell, User } from 'lucide-react';
 import {
@@ -13,9 +15,18 @@ import {
 
 interface HeaderProps {
   onMenuClick?: () => void;
+  sessionEmail?: string | null;
 }
 
-export function Header({ onMenuClick }: HeaderProps) {
+export function Header({ onMenuClick, sessionEmail }: HeaderProps) {
+  const router = useRouter();
+
+  async function handleSignOut() {
+    await fetch('/api/auth/logout', { method: 'POST' });
+    router.replace('/auth');
+    router.refresh();
+  }
+
   return (
     <header className="sticky top-0 z-20 h-16 border-b border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
       <div className="flex h-full items-center justify-between px-4">
@@ -51,15 +62,16 @@ export function Header({ onMenuClick }: HeaderProps) {
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel>
                 <div className="flex flex-col">
-                  <span>Alex Chen</span>
-                  <span className="text-xs text-muted-foreground font-normal">alex.chen@asu.edu</span>
+                  <span>Zoom Innovation Lab</span>
+                  <span className="text-xs text-muted-foreground font-normal">{sessionEmail ?? 'Authenticated session'}</span>
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>Profile</DropdownMenuItem>
-              <DropdownMenuItem>Settings</DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/settings">Settings</Link>
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>Sign out</DropdownMenuItem>
+              <DropdownMenuItem onClick={handleSignOut}>Sign out</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

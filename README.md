@@ -12,14 +12,18 @@ Operational asset tracking for the Zoom Innovation Lab. Built with Next.js 16, R
 
 ## Environment
 
-Create `.env.local` from `.env.example` and add your Neon connection string:
+Create `.env.local` from `.env.example` and add your Neon connection string. The app also requires a simple shared-login gate configured through environment variables:
 
 ```env
 DATABASE_URL="postgresql://USER:PASSWORD@HOST.neon.tech/DB?sslmode=require"
+BASIC_AUTH_EMAIL="your-login-email@example.com"
+BASIC_AUTH_PASSWORD="your-strong-password"
+AUTH_SECRET="replace-with-a-long-random-secret"
 ```
 
 Use Neon's pooled connection string for serverless deployments when available.
 Restart `npm run dev` after changing environment variables.
+If these auth variables are missing, login stays disabled until you set them.
 
 ## Setup
 
@@ -56,7 +60,8 @@ No fake assets are seeded.
 | History | `/history` | Immutable event log |
 | Locations | `/locations` | Location counts and details |
 | Audit Mode | `/audit` | Location audit sessions and scan reconciliation |
-| Settings | `/settings` | Add assets, manage types, locations, users, labels, QR settings |
+| Login | `/login` | Shared device login gate |
+| Settings | `/settings` | Add assets, manage asset types, locations, and users |
 
 `/batch` redirects to `/batch-scan` for compatibility.
 
