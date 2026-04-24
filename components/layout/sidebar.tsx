@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { AppLogo } from '@/components/shared/app-logo';
+import { AccountMenu } from '@/components/layout/account-menu';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
@@ -20,6 +21,9 @@ import {
 interface SidebarProps {
   className?: string;
   onClose?: () => void;
+  side?: 'left' | 'right';
+  sessionName?: string | null;
+  sessionEmail?: string | null;
 }
 
 const navItems = [
@@ -32,12 +36,13 @@ const navItems = [
   { href: '/settings', label: 'Settings', icon: Settings },
 ];
 
-export function Sidebar({ className, onClose }: SidebarProps) {
+export function Sidebar({ className, onClose, side = 'left', sessionName, sessionEmail }: SidebarProps) {
   const pathname = usePathname();
 
   return (
     <div className={cn(
-      'fixed inset-y-0 left-0 z-30 w-64 flex flex-col bg-card border-r border-border',
+      'fixed inset-y-0 z-30 w-64 flex flex-col bg-card border-border',
+      side === 'left' ? 'left-0 border-r' : 'right-0 border-l',
       className
     )}>
       {/* Logo */}
@@ -83,11 +88,8 @@ export function Sidebar({ className, onClose }: SidebarProps) {
       </ScrollArea>
 
       {/* Footer */}
-      <div className="p-4 border-t border-border">
-        <div className="text-xs text-muted-foreground">
-          <p>Zoom Innovation Lab</p>
-          <p>Arizona State University</p>
-        </div>
+      <div className="border-t border-border p-4">
+        <AccountMenu sessionName={sessionName} sessionEmail={sessionEmail} onClose={onClose} />
       </div>
     </div>
   );

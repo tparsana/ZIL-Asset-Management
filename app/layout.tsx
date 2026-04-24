@@ -3,7 +3,7 @@ import { cookies } from 'next/headers'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { AppShell } from '@/components/layout/app-shell'
-import { AUTH_COOKIE_NAME, verifySessionToken } from '@/lib/auth'
+import { AUTH_COOKIE_NAME, getConfiguredAuthName, verifySessionToken } from '@/lib/auth'
 import { ThemeProvider } from '@/components/theme-provider'
 import { Toaster } from '@/components/ui/sonner'
 import './globals.css'
@@ -35,12 +35,15 @@ export default async function RootLayout({
 }>) {
   const cookieStore = await cookies();
   const session = await verifySessionToken(cookieStore.get(AUTH_COOKIE_NAME)?.value);
+  const sessionName = getConfiguredAuthName(session?.email ?? null);
 
   return (
     <html lang="en" className="bg-background" suppressHydrationWarning>
       <body className="font-sans antialiased min-h-screen">
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-          <AppShell sessionEmail={session?.email ?? null}>{children}</AppShell>
+          <AppShell sessionName={sessionName} sessionEmail={session?.email ?? null}>
+            {children}
+          </AppShell>
           <Toaster richColors />
         </ThemeProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}

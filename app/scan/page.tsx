@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { BackButton } from '@/components/shared/back-button';
 import { AssetThumbnail } from '@/components/shared/asset-thumbnail';
 import { ScannerPanel } from '@/components/shared/scanner-panel';
 import { StatusBadge } from '@/components/shared/status-badge';
@@ -180,22 +179,19 @@ export default function ScanPage() {
 
   return (
     <div className="space-y-6 p-4 sm:p-5 lg:p-6">
-      <div className="space-y-3">
-        <BackButton fallbackHref="/" />
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-balance sm:text-3xl">Scan Asset</h1>
-            <p className="text-muted-foreground mt-2">
-              {batchMode
-                ? 'Scan multiple asset IDs to build a batch for temporary checkout or return.'
-                : 'Scan or enter an asset ID to check out for use or return to the home location.'}
-            </p>
-          </div>
-          <Button variant={batchMode ? 'default' : 'outline'} onClick={toggleBatchMode} className="w-full sm:w-auto">
-            <Layers className="mr-2 h-4 w-4" />
-            {batchMode ? 'Exit Batch Add' : 'Batch Add'}
-          </Button>
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-balance sm:text-3xl">Scan Asset</h1>
+          <p className="text-muted-foreground mt-2">
+            {batchMode
+              ? 'Scan multiple asset IDs to build a batch for temporary checkout or return.'
+              : 'Scan or enter an asset ID to check out for use or return to the home location.'}
+          </p>
         </div>
+        <Button variant={batchMode ? 'default' : 'outline'} onClick={toggleBatchMode} className="w-full sm:w-auto">
+          <Layers className="mr-2 h-4 w-4" />
+          {batchMode ? 'Exit Batch Add' : 'Batch Add'}
+        </Button>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[minmax(280px,0.9fr)_minmax(0,1.1fr)] lg:gap-6 xl:grid-cols-[minmax(320px,0.8fr)_minmax(0,1.2fr)]">

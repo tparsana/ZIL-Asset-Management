@@ -3,7 +3,6 @@
 import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { BackButton } from '@/components/shared/back-button';
 import { AssetThumbnail } from '@/components/shared/asset-thumbnail';
 import { EmptyState } from '@/components/shared/empty-state';
 import { StatusBadge } from '@/components/shared/status-badge';
@@ -64,12 +63,9 @@ function LocationsContent() {
   if (selectedLocationId) {
     return (
       <div className="space-y-6 p-4 sm:p-5 lg:p-6">
-        <div className="space-y-3">
-          <BackButton fallbackHref="/locations" />
-          <div>
-            <h1 className="text-2xl font-bold text-balance sm:text-3xl">{details?.location.name ?? 'Location Details'}</h1>
-            <p className="text-muted-foreground mt-2">Current assets, items in use, and recent location activity</p>
-          </div>
+        <div className="min-w-0">
+          <h1 className="text-2xl font-bold text-balance sm:text-3xl">{details?.location.name ?? 'Location Details'}</h1>
+          <p className="text-muted-foreground mt-2">Current assets, items in use, and recent location activity</p>
         </div>
 
         {details ? (

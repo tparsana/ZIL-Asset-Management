@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { BackButton } from '@/components/shared/back-button';
 import { AssetThumbnail } from '@/components/shared/asset-thumbnail';
 import { EmptyState } from '@/components/shared/empty-state';
 import { ScannerPanel } from '@/components/shared/scanner-panel';
@@ -101,12 +100,9 @@ export default function AuditPage() {
 
   return (
     <div className="space-y-6 p-4 sm:p-5 lg:p-6">
-      <div className="space-y-3">
-        <BackButton fallbackHref="/" />
-        <div>
-          <h1 className="text-2xl font-bold text-balance sm:text-3xl">Audit Mode</h1>
-          <p className="text-muted-foreground mt-2">Reconcile expected vs. actual assets in a location</p>
-        </div>
+      <div className="min-w-0">
+        <h1 className="text-2xl font-bold text-balance sm:text-3xl">Audit Mode</h1>
+        <p className="text-muted-foreground mt-2">Reconcile expected vs. actual assets in a location</p>
       </div>
 
       {!session ? (

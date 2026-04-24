@@ -2,7 +2,6 @@
 
 import { FormEvent, useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { BackButton } from '@/components/shared/back-button';
 import { QrCodeCard } from '@/components/shared/qr-code-card';
 import { ReferenceImageField } from '@/components/shared/reference-image-field';
 import {
@@ -250,12 +249,9 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-6 p-4 sm:p-5 lg:p-6">
-      <div className="space-y-3">
-        <BackButton fallbackHref="/" />
-        <div>
-          <h1 className="text-2xl font-bold text-balance sm:text-3xl">Settings</h1>
-          <p className="text-muted-foreground mt-2">Admin configuration and operational setup</p>
-        </div>
+      <div className="min-w-0">
+        <h1 className="text-2xl font-bold text-balance sm:text-3xl">Settings</h1>
+        <p className="text-muted-foreground mt-2">Admin configuration and operational setup</p>
       </div>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(240px,300px)_minmax(0,1fr)] xl:gap-6">

@@ -16,6 +16,7 @@ Create `.env.local` from `.env.example` and add your Neon connection string. The
 
 ```env
 DATABASE_URL="postgresql://USER:PASSWORD@HOST.neon.tech/DB?sslmode=require"
+BASIC_AUTH_NAME="Your Workspace Name"
 BASIC_AUTH_EMAIL="your-login-email@example.com"
 BASIC_AUTH_PASSWORD="your-strong-password"
 AUTH_SECRET="replace-with-a-long-random-secret"
@@ -24,6 +25,7 @@ AUTH_SECRET="replace-with-a-long-random-secret"
 Use Neon's pooled connection string for serverless deployments when available.
 Restart `npm run dev` after changing environment variables.
 If these auth variables are missing, login stays disabled until you set them.
+`BASIC_AUTH_NAME` is optional, but it lets you control the display name shown in the account menu.
 
 ## Setup
 

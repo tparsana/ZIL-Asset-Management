@@ -1,4 +1,5 @@
 const AUTH_EMAIL = process.env.BASIC_AUTH_EMAIL?.trim();
+const AUTH_NAME = process.env.BASIC_AUTH_NAME?.trim();
 const AUTH_PASSWORD = process.env.BASIC_AUTH_PASSWORD;
 const AUTH_SECRET = process.env.AUTH_SECRET?.trim();
 
@@ -33,6 +34,29 @@ async function signValue(value: string) {
 
 export function getConfiguredAuthEmail() {
   return AUTH_EMAIL ?? null;
+}
+
+function humanizeAuthEmail(email: string) {
+  const localPart = email.split('@')[0]?.trim();
+  if (!localPart) return 'Authenticated User';
+
+  const words = localPart
+    .replace(/[._-]+/g, ' ')
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .split(' ')
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1));
+
+  return words.join(' ') || 'Authenticated User';
+}
+
+export function getConfiguredAuthName(email?: string | null) {
+  if (AUTH_NAME) return AUTH_NAME;
+  if (email) return humanizeAuthEmail(email);
+  if (AUTH_EMAIL) return humanizeAuthEmail(AUTH_EMAIL);
+  return 'Authenticated User';
 }
 
 export async function isValidLogin(email: string, password: string) {

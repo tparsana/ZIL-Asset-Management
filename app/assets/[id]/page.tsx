@@ -3,7 +3,6 @@
 import { FormEvent, use, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { BackButton } from '@/components/shared/back-button';
 import { AssetThumbnail } from '@/components/shared/asset-thumbnail';
 import { QrCodeCard } from '@/components/shared/qr-code-card';
 import { ReferenceImageField, shortenImageUrl } from '@/components/shared/reference-image-field';
@@ -191,12 +190,9 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
 
   return (
     <div className="space-y-6 p-4 sm:p-5 lg:p-6">
-      <div className="space-y-3">
-        <BackButton fallbackHref="/inventory" />
-        <div>
-          <h1 className="text-2xl font-bold text-balance sm:text-3xl">Asset Details</h1>
-          {asset && <p className="text-muted-foreground mt-2">{asset.name} · {asset.assetId}</p>}
-        </div>
+      <div className="min-w-0">
+        <h1 className="text-2xl font-bold text-balance sm:text-3xl">Asset Details</h1>
+        {asset && <p className="text-muted-foreground mt-2">{asset.name} · {asset.assetId}</p>}
       </div>
 
       {asset ? (
