@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { format, subDays } from 'date-fns';
+import type { DateRange } from 'react-day-picker';
 import {
   Bar,
   BarChart,
@@ -17,7 +18,9 @@ import {
   Boxes,
   Building2,
   CalendarRange,
+  ChevronDown,
   Clock3,
+  Filter,
   Package,
   PackageCheck,
   ShieldAlert,
@@ -28,6 +31,8 @@ import { InsightKpiCard } from '@/components/insights/insight-kpi-card';
 import { RecommendationCard } from '@/components/insights/recommendation-card';
 import { RoomDemandHeatmap } from '@/components/insights/room-demand-heatmap';
 import { EmptyState } from '@/components/shared/empty-state';
+import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
 import {
   ChartContainer,
   ChartLegend,
@@ -42,7 +47,12 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   Select,
   SelectContent,
@@ -103,6 +113,16 @@ function buildInsightsQuery(filters: FilterState) {
   return params.toString();
 }
 
+function getTodayDate() {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return today;
+}
+
+function formatDateRangeLabel(fromDate: string, toDate: string) {
+  return `${format(new Date(`${fromDate}T00:00:00`), 'd MMM, yyyy')} - ${format(new Date(`${toDate}T00:00:00`), 'd MMM, yyyy')}`;
+}
+
 function formatHoursShort(hours: number) {
   if (hours >= 24) return `${(hours / 24).toFixed(1)}d`;
   if (hours >= 1) return `${hours.toFixed(1)}h`;
@@ -144,10 +164,14 @@ const kpiIcons = {
 } satisfies Record<keyof InsightsResponse['overview'], LucideIcon>;
 
 export default function InsightsPage() {
+  const today = useMemo(() => getTodayDate(), []);
   const [filters, setFilters] = useState<FilterState>(getDefaultFilters);
   const [insights, setInsights] = useState<InsightsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [draftDateRange, setDraftDateRange] = useState<DateRange | undefined>(undefined);
+  const [awaitingRangeEnd, setAwaitingRangeEnd] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -229,115 +253,211 @@ export default function InsightsPage() {
     [insights],
   );
 
+  const selectedDateRange = useMemo<DateRange>(
+    () => ({
+      from: new Date(`${filters.fromDate}T00:00:00`),
+      to: new Date(`${filters.toDate}T00:00:00`),
+    }),
+    [filters.fromDate, filters.toDate],
+  );
+
+  useEffect(() => {
+    setDraftDateRange(selectedDateRange);
+  }, [selectedDateRange]);
+
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (filters.locationId !== ALL_LOCATIONS) count += 1;
+    if (filters.assetTypeId !== ALL_ASSET_TYPES) count += 1;
+    if (filters.granularity !== 'week') count += 1;
+    return count;
+  }, [filters.assetTypeId, filters.granularity, filters.locationId]);
+
+  function applyDateRange(from: Date, to: Date) {
+    const normalizedFrom = from.getTime() <= to.getTime() ? from : to;
+    const normalizedTo = from.getTime() <= to.getTime() ? to : from;
+
+    setFilters((current) => ({
+      ...current,
+      fromDate: format(normalizedFrom, 'yyyy-MM-dd'),
+      toDate: format(normalizedTo, 'yyyy-MM-dd'),
+    }));
+  }
+
+  function handleDatePickerOpenChange(open: boolean) {
+    if (open) {
+      setDraftDateRange(selectedDateRange);
+      setAwaitingRangeEnd(false);
+      setDatePickerOpen(true);
+      return;
+    }
+
+    if (awaitingRangeEnd && draftDateRange?.from) {
+      applyDateRange(draftDateRange.from, draftDateRange.to ?? today);
+    }
+
+    setAwaitingRangeEnd(false);
+    setDatePickerOpen(false);
+  }
+
+  function handleDateSelect(day: Date | undefined) {
+    if (!day) return;
+
+    const pickedDay = new Date(day);
+    pickedDay.setHours(0, 0, 0, 0);
+
+    if (!awaitingRangeEnd || !draftDateRange?.from) {
+      setDraftDateRange({
+        from: pickedDay,
+        to: today,
+      });
+      setAwaitingRangeEnd(true);
+      return;
+    }
+
+    const draftStart = draftDateRange.from;
+    const nextFrom = draftStart.getTime() <= pickedDay.getTime() ? draftStart : pickedDay;
+    const nextTo = draftStart.getTime() <= pickedDay.getTime() ? pickedDay : draftStart;
+
+    setDraftDateRange({ from: nextFrom, to: nextTo });
+    applyDateRange(nextFrom, nextTo);
+    setAwaitingRangeEnd(false);
+    setDatePickerOpen(false);
+  }
+
   return (
     <div className="space-y-6 p-4 sm:p-5 lg:p-6">
-      <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
-        <div>
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="max-w-3xl">
           <h1 className="text-2xl font-bold text-balance sm:text-3xl">Insights</h1>
           <p className="mt-2 max-w-3xl text-muted-foreground">
             Analytics and operational trends from asset activity, audits, and inventory state.
           </p>
         </div>
-        <div className="text-sm text-muted-foreground">
-          {loading && insights
-            ? 'Refreshing insights...'
-            : insights
-              ? `Updated ${formatDateTime(insights.meta.generatedAt)}`
-              : 'Last 30 days by default'}
+        <div className="flex w-full flex-col gap-2 lg:w-auto lg:items-end">
+          <div className="flex w-full gap-2 lg:w-auto lg:items-center lg:justify-end">
+            <Popover open={datePickerOpen} onOpenChange={handleDatePickerOpenChange}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="h-10 min-w-0 justify-between rounded-xl border-border bg-card px-4 text-left font-medium sm:w-auto sm:min-w-[20rem] sm:whitespace-nowrap"
+                >
+                  <span className="flex min-w-0 items-center gap-3">
+                    <CalendarRange className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <span className="truncate text-foreground">
+                      {formatDateRangeLabel(filters.fromDate, filters.toDate)}
+                    </span>
+                  </span>
+                  <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-auto rounded-2xl p-3">
+                <div className="space-y-3">
+                  <div className="px-1">
+                    <p className="text-sm font-medium">Date Range</p>
+                    <p className="text-xs text-muted-foreground">Select the reporting window for all insights.</p>
+                  </div>
+                  <Calendar
+                    mode="range"
+                    numberOfMonths={1}
+                    disabled={{ after: today }}
+                    selected={draftDateRange ?? selectedDateRange}
+                    onDayClick={handleDateSelect}
+                    classNames={{
+                      today:
+                        'relative text-foreground after:absolute after:left-2 after:right-2 after:bottom-1 after:h-0.5 after:rounded-full after:bg-[#8C1D40]',
+                      range_start: 'rounded-l-md bg-transparent',
+                      range_middle: 'bg-[#E8E8E8] text-[#484848]',
+                      range_end: 'rounded-r-md bg-transparent',
+                    }}
+                  />
+                </div>
+              </PopoverContent>
+            </Popover>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon" className="relative h-10 w-10 shrink-0 rounded-xl">
+                  <Filter className="h-4 w-4" />
+                  {activeFilterCount > 0 && (
+                    <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-primary-foreground">
+                      {activeFilterCount}
+                    </span>
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-72 space-y-3 rounded-2xl p-3">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Location</label>
+                  <Select
+                    value={filters.locationId}
+                    onValueChange={(value) => setFilters((current) => ({ ...current, locationId: value }))}
+                  >
+                    <SelectTrigger className="h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={ALL_LOCATIONS}>All Locations</SelectItem>
+                      {(insights?.options.locations ?? []).map((location) => (
+                        <SelectItem key={location.id} value={location.id}>
+                          {location.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Asset Type</label>
+                  <Select
+                    value={filters.assetTypeId}
+                    onValueChange={(value) => setFilters((current) => ({ ...current, assetTypeId: value }))}
+                  >
+                    <SelectTrigger className="h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={ALL_ASSET_TYPES}>All Asset Types</SelectItem>
+                      {(insights?.options.assetTypes ?? []).map((assetType) => (
+                        <SelectItem key={assetType.id} value={assetType.id}>
+                          {assetType.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Granularity</label>
+                  <Select
+                    value={filters.granularity}
+                    onValueChange={(value) =>
+                      setFilters((current) => ({ ...current, granularity: value as InsightsGranularity }))
+                    }
+                  >
+                    <SelectTrigger className="h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="day">Day</SelectItem>
+                      <SelectItem value="week">Week</SelectItem>
+                      <SelectItem value="month">Month</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
+          <p className="text-sm text-muted-foreground lg:text-right">
+            {loading && insights
+              ? 'Refreshing insights...'
+              : insights
+                ? `Updated ${formatDateTime(insights.meta.generatedAt)}`
+                : 'Last 30 days by default'}
+          </p>
         </div>
       </div>
-
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <CalendarRange className="h-5 w-5" />
-            Filters
-          </CardTitle>
-          <CardDescription>Apply one set of filters across the entire analytics view.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-            <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">From</label>
-              <Input
-                type="date"
-                value={filters.fromDate}
-                onChange={(event) => setFilters((current) => ({ ...current, fromDate: event.target.value }))}
-                max={filters.toDate}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">To</label>
-              <Input
-                type="date"
-                value={filters.toDate}
-                onChange={(event) => setFilters((current) => ({ ...current, toDate: event.target.value }))}
-                min={filters.fromDate}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Location</label>
-              <Select
-                value={filters.locationId}
-                onValueChange={(value) => setFilters((current) => ({ ...current, locationId: value }))}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={ALL_LOCATIONS}>All Locations</SelectItem>
-                  {(insights?.options.locations ?? []).map((location) => (
-                    <SelectItem key={location.id} value={location.id}>
-                      {location.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Asset Type</label>
-              <Select
-                value={filters.assetTypeId}
-                onValueChange={(value) => setFilters((current) => ({ ...current, assetTypeId: value }))}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={ALL_ASSET_TYPES}>All Asset Types</SelectItem>
-                  {(insights?.options.assetTypes ?? []).map((assetType) => (
-                    <SelectItem key={assetType.id} value={assetType.id}>
-                      {assetType.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Granularity</label>
-              <Select
-                value={filters.granularity}
-                onValueChange={(value) =>
-                  setFilters((current) => ({ ...current, granularity: value as InsightsGranularity }))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="day">Day</SelectItem>
-                  <SelectItem value="week">Week</SelectItem>
-                  <SelectItem value="month">Month</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
       {error && (
         <Card className="border-destructive/50 bg-destructive/5">
