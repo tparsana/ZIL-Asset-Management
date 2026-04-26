@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { AssetThumbnail } from '@/components/shared/asset-thumbnail';
 import { ScannerPanel } from '@/components/shared/scanner-panel';
+import { StaffNameField } from '@/components/shared/staff-name-field';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,7 +16,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -380,15 +380,12 @@ export default function ScanPage() {
             )}
             <div className="space-y-2">
               <label className="text-sm font-medium">Handled By</label>
-              <Input
+              <StaffNameField
                 value={handledBy}
-                onChange={(event) => setHandledBy(event.target.value)}
-                list="scan-users"
+                onChange={setHandledBy}
+                users={users}
                 placeholder="Required staff name"
               />
-              <datalist id="scan-users">
-                {users.map((user) => <option key={user.id} value={user.name} />)}
-              </datalist>
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Notes</label>

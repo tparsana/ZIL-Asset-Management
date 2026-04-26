@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Scan, Package, Settings } from 'lucide-react';
+import { BarChart3, Scan, Package, Settings } from 'lucide-react';
 import { ActivityRow } from '@/components/shared/activity-row';
 import { AssetThumbnail } from '@/components/shared/asset-thumbnail';
 import { EmptyState } from '@/components/shared/empty-state';
@@ -51,12 +51,15 @@ export default function DashboardPage() {
 
       <div>
         <h2 className="text-lg font-semibold mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3 sm:gap-4">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4 sm:gap-4">
           <Link href="/scan" className="block h-full">
             <QuickActionCard title="Scan Asset" description="Find and update one asset" icon={Scan} />
           </Link>
           <Link href="/inventory" className="block h-full">
             <QuickActionCard title="View Inventory" description="Browse all tracked equipment" icon={Package} />
+          </Link>
+          <Link href="/insights" className="block h-full">
+            <QuickActionCard title="Insights" description="Review analytics and operational trends" icon={BarChart3} />
           </Link>
           <Link href="/settings" className="block h-full">
             <QuickActionCard title="Settings" description="Add assets and manage setup" icon={Settings} />

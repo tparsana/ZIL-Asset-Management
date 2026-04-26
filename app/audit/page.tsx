@@ -1,13 +1,16 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
+import { exportAuditReportPdf } from '@/lib/export/audit-report-pdf';
 import { AssetThumbnail } from '@/components/shared/asset-thumbnail';
 import { EmptyState } from '@/components/shared/empty-state';
 import { ScannerPanel } from '@/components/shared/scanner-panel';
+import { StaffNameField } from '@/components/shared/staff-name-field';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -15,12 +18,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import type { AuditReport, AuditSession, AuditSummary, Location } from '@/lib/types';
+import type { AppUser, AuditReport, AuditSession, AuditSummary, Location } from '@/lib/types';
 import { formatDateTime, formatEventType } from '@/lib/format';
-import { ClipboardCheck, Play, CheckCircle, AlertTriangle, Copy, Download } from 'lucide-react';
+import { ClipboardCheck, Play, CheckCircle, AlertTriangle, Copy, Download, FolderOpen } from 'lucide-react';
 
 export default function AuditPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [locations, setLocations] = useState<Location[]>([]);
+  const [users, setUsers] = useState<AppUser[]>([]);
+  const [auditSessions, setAuditSessions] = useState<AuditSession[]>([]);
   const [selectedLocation, setSelectedLocation] = useState('');
   const [startedBy, setStartedBy] = useState('');
   const [session, setSession] = useState<AuditSession | null>(null);
@@ -28,14 +35,33 @@ export default function AuditPage() {
   const [report, setReport] = useState<AuditReport | null>(null);
   const [assetCode, setAssetCode] = useState('');
   const [loading, setLoading] = useState(false);
+  const [exportingReport, setExportingReport] = useState(false);
+  const [exportingAuditId, setExportingAuditId] = useState<string | null>(null);
+  const activeSessionId = searchParams.get('session');
 
   useEffect(() => {
-    async function loadLocations() {
-      const response = await fetch('/api/locations', { cache: 'no-store' });
-      if (response.ok) setLocations((await response.json()).locations);
+    async function loadReferenceData() {
+      const [locationsResponse, auditsResponse, usersResponse] = await Promise.all([
+        fetch('/api/locations', { cache: 'no-store' }),
+        fetch('/api/audits', { cache: 'no-store' }),
+        fetch('/api/users', { cache: 'no-store' }),
+      ]);
+      if (locationsResponse.ok) setLocations((await locationsResponse.json()).locations);
+      if (auditsResponse.ok) setAuditSessions((await auditsResponse.json()).sessions);
+      if (usersResponse.ok) setUsers((await usersResponse.json()).users);
     }
-    loadLocations();
+    loadReferenceData();
   }, []);
+
+  async function loadAuditSessions() {
+    const response = await fetch('/api/audits', { cache: 'no-store' });
+    if (response.ok) setAuditSessions((await response.json()).sessions);
+  }
+
+  useEffect(() => {
+    if (!activeSessionId || activeSessionId === session?.id) return;
+    void openAuditSession(activeSessionId, { silent: true });
+  }, [activeSessionId, session?.id]);
 
   async function startAudit() {
     if (!selectedLocation) return;
@@ -56,6 +82,8 @@ export default function AuditPage() {
       setSession(data.session);
       setSummary(data.summary);
       setReport(null);
+      router.push(`/audit?session=${encodeURIComponent(data.session.id)}`);
+      await loadAuditSessions();
       toast.success('Audit started');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to start audit');
@@ -99,6 +127,7 @@ export default function AuditPage() {
       setSession(data.session);
       setSummary(data.summary);
       setReport(data.report ?? null);
+      await loadAuditSessions();
       toast.success(
         data.report?.totals.missing
           ? `Audit completed. ${data.report.totals.missing} item${data.report.totals.missing === 1 ? '' : 's'} marked missing.`
@@ -111,67 +140,199 @@ export default function AuditPage() {
     }
   }
 
-  function exportAuditReport() {
+  async function exportAuditReport() {
     if (!report) return;
 
-    const locationName = report.location.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-    const datePart = report.generatedAt.slice(0, 10);
-    const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = `audit-report-${locationName || 'location'}-${datePart}.json`;
-    document.body.appendChild(anchor);
-    anchor.click();
-    anchor.remove();
-    URL.revokeObjectURL(url);
+    setExportingReport(true);
+    try {
+      await exportAuditReportPdf(report);
+      toast.success('Audit report PDF downloaded');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to export audit report PDF');
+    } finally {
+      setExportingReport(false);
+    }
+  }
+
+  async function exportPastAuditReport(auditSessionId: string) {
+    setExportingAuditId(auditSessionId);
+    try {
+      const response = await fetch(`/api/audits/${encodeURIComponent(auditSessionId)}`, { cache: 'no-store' });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to load audit report');
+      if (!data.report) throw new Error('Audit report is not available for this session');
+
+      await exportAuditReportPdf(data.report);
+      toast.success('Audit report PDF downloaded');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to export audit report PDF');
+    } finally {
+      setExportingAuditId(null);
+    }
+  }
+
+  async function openAuditSession(auditSessionId: string, options?: { silent?: boolean }) {
+    setLoading(true);
+    try {
+      const response = await fetch(`/api/audits/${encodeURIComponent(auditSessionId)}`, { cache: 'no-store' });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to load audit');
+
+      setSession(data.session);
+      setSummary(data.summary);
+      setReport(data.report ?? null);
+      setStartedBy(data.session?.startedBy ?? '');
+      setSelectedLocation(data.session?.locationId ?? '');
+      if (activeSessionId !== auditSessionId) {
+        router.push(`/audit?session=${encodeURIComponent(auditSessionId)}`);
+      }
+      if (!options?.silent) toast.success('Audit loaded');
+    } catch (error) {
+      if (!options?.silent) {
+        toast.error(error instanceof Error ? error.message : 'Failed to load audit');
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function closeAuditView() {
+    setSession(null);
+    setSummary(null);
+    setReport(null);
+    setAssetCode('');
+    setStartedBy('');
+    setSelectedLocation('');
+    router.push('/audit');
   }
 
   return (
     <div className="space-y-6 p-4 sm:p-5 lg:p-6">
-      <div className="min-w-0">
-        <h1 className="text-2xl font-bold text-balance sm:text-3xl">Audit Mode</h1>
-        <p className="text-muted-foreground mt-2">Reconcile expected vs. actual assets in a location</p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-bold text-balance sm:text-3xl">Audit Mode</h1>
+          <p className="text-muted-foreground mt-2">Reconcile expected vs. actual assets in a location</p>
+        </div>
+        {session && (
+          <Button variant="outline" onClick={closeAuditView} className="w-full sm:w-auto">
+            Back to Audits
+          </Button>
+        )}
       </div>
 
       {!session ? (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <ClipboardCheck className="h-5 w-5" />
-              Start Audit
-            </CardTitle>
-            <CardDescription>Begin a location inventory check</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <label className="text-sm font-medium mb-2 block">Select Location</label>
-              <Select value={selectedLocation} onValueChange={setSelectedLocation}>
-                <SelectTrigger><SelectValue placeholder="Choose a location..." /></SelectTrigger>
-                <SelectContent>
-                  {locations.map((location) => <SelectItem key={location.id} value={location.id}>{location.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="text-sm font-medium mb-2 block">Started By</label>
-              <Input
-                value={startedBy}
-                onChange={(event) => setStartedBy(event.target.value)}
-                placeholder="Required staff name"
-              />
-            </div>
-            <Button onClick={startAudit} disabled={!selectedLocation || !startedBy.trim() || loading} className="w-full">
-              <Play className="h-4 w-4 mr-2" />
-              Start Audit
-            </Button>
-          </CardContent>
-        </Card>
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] xl:gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ClipboardCheck className="h-5 w-5" />
+                Start Audit
+              </CardTitle>
+              <CardDescription>Begin a location inventory check</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <label className="text-sm font-medium mb-2 block">Select Location</label>
+                <Select value={selectedLocation} onValueChange={setSelectedLocation}>
+                  <SelectTrigger><SelectValue placeholder="Choose a location..." /></SelectTrigger>
+                  <SelectContent>
+                    {locations.map((location) => <SelectItem key={location.id} value={location.id}>{location.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">Started By</label>
+                <StaffNameField
+                  value={startedBy}
+                  onChange={setStartedBy}
+                  users={users}
+                  placeholder="Required staff name"
+                />
+              </div>
+              <Button onClick={startAudit} disabled={!selectedLocation || !startedBy.trim() || loading} className="w-full">
+                <Play className="h-4 w-4 mr-2" />
+                Start Audit
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="overflow-hidden">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FolderOpen className="h-5 w-5" />
+                Past Audits
+              </CardTitle>
+              <CardDescription>Open a previous audit to review its report or resume its session state.</CardDescription>
+            </CardHeader>
+            <CardContent className="max-h-[32rem] overflow-y-auto pr-3">
+              {auditSessions.length > 0 ? (
+                <div className="space-y-3">
+                  {auditSessions.map((auditSession) => (
+                    <div key={auditSession.id} className="rounded-xl border p-4">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="min-w-0 space-y-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="font-medium">{auditSession.location?.name ?? 'Unknown location'}</p>
+                            <span
+                              className={cn(
+                                'inline-flex rounded-full px-2 py-0.5 text-xs font-medium capitalize',
+                                auditSession.status === 'completed'
+                                  ? 'bg-status-available/10 text-status-available'
+                                  : auditSession.status === 'in-progress'
+                                    ? 'bg-status-in-use/10 text-status-in-use'
+                                    : 'bg-muted text-muted-foreground'
+                              )}
+                            >
+                              {auditSession.status.replace('-', ' ')}
+                            </span>
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            Started {formatDateTime(auditSession.startedAt)}
+                            {auditSession.startedBy ? ` by ${auditSession.startedBy}` : ''}
+                          </p>
+                          {auditSession.completedAt && (
+                            <p className="text-sm text-muted-foreground">Completed {formatDateTime(auditSession.completedAt)}</p>
+                          )}
+                        </div>
+                        <div className="flex flex-col gap-2 sm:flex-row">
+                          {auditSession.status === 'completed' && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => exportPastAuditReport(auditSession.id)}
+                              disabled={loading || exportingAuditId === auditSession.id}
+                            >
+                              <Download className="mr-2 h-4 w-4" />
+                              {exportingAuditId === auditSession.id ? 'Exporting...' : 'Export PDF'}
+                            </Button>
+                          )}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openAuditSession(auditSession.id)}
+                            disabled={loading || exportingAuditId === auditSession.id}
+                          >
+                            Open Audit
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <EmptyState
+                  title="No past audits yet"
+                  description="Completed or active audit sessions will appear here so they can be reopened later."
+                />
+              )}
+            </CardContent>
+          </Card>
+        </div>
       ) : (
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(300px,360px)] xl:gap-6">
           <Card>
             <CardHeader>
-              <CardTitle>Audit in Progress</CardTitle>
+              <CardTitle>{session.status === 'in-progress' ? 'Audit in Progress' : 'Audit Review'}</CardTitle>
               <CardDescription>Location: {session.location?.name ?? locations.find((location) => location.id === session.locationId)?.name}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -283,9 +444,14 @@ export default function AuditPage() {
                 Completed {formatDateTime(session.completedAt ?? report.generatedAt)} for {report.location.name}
               </CardDescription>
             </div>
-            <Button variant="outline" onClick={exportAuditReport} className="w-full sm:w-auto">
+            <Button
+              variant="outline"
+              onClick={exportAuditReport}
+              disabled={exportingReport}
+              className="w-full sm:w-auto"
+            >
               <Download className="mr-2 h-4 w-4" />
-              Export Report
+              {exportingReport ? 'Exporting PDF...' : 'Export Report PDF'}
             </Button>
           </CardHeader>
           <CardContent className="space-y-6">

@@ -9,8 +9,9 @@ interface HeaderProps {
   onMenuClick?: () => void;
 }
 
-function fallbackForPath(pathname: string, hasLocationDetail: boolean) {
+function fallbackForPath(pathname: string, hasLocationDetail: boolean, hasAuditSession: boolean) {
   if (pathname.startsWith('/assets/')) return '/inventory';
+  if (pathname === '/audit' && hasAuditSession) return '/audit';
   if (pathname === '/locations' && hasLocationDetail) return '/locations';
   return '/';
 }
@@ -20,8 +21,9 @@ export function Header({ onMenuClick }: HeaderProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const hasLocationDetail = pathname === '/locations' && Boolean(searchParams.get('id'));
+  const hasAuditSession = pathname === '/audit' && Boolean(searchParams.get('session'));
   const showBackButton = pathname !== '/' && pathname !== '/auth' && pathname !== '/login';
-  const fallbackHref = fallbackForPath(pathname, hasLocationDetail);
+  const fallbackHref = fallbackForPath(pathname, hasLocationDetail, hasAuditSession);
 
   return (
     <header className="sticky top-0 z-20 h-16 border-b border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
@@ -32,6 +34,11 @@ export function Header({ onMenuClick }: HeaderProps) {
               variant="ghost"
               size="icon"
               onClick={() => {
+                if (hasAuditSession) {
+                  router.push(fallbackHref);
+                  return;
+                }
+
                 if (typeof window !== 'undefined' && window.history.length > 1) {
                   router.back();
                 } else {

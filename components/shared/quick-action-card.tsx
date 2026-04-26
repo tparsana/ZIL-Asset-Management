@@ -30,7 +30,7 @@ export function QuickActionCard({
       )}
       onClick={onClick}
     >
-      <CardContent className="flex min-h-28 flex-col items-center justify-center p-4 text-center sm:min-h-32 sm:p-5">
+      <CardContent className="flex min-h-28 flex-col items-center justify-center p-4 text-center md:min-h-32 md:p-5 xl:min-h-28 xl:p-4">
         <div className={cn(
           'mb-3 flex h-11 w-11 items-center justify-center rounded-xl sm:h-12 sm:w-12',
           variant === 'default' ? 'bg-secondary' : 'bg-primary-foreground/20'

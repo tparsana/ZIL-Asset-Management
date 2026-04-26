@@ -13,7 +13,7 @@ export async function GET(
   if (!summary) return NextResponse.json({ error: 'Audit not found' }, { status: 404 });
 
   const report = await getAuditReport(id, summary);
-  return NextResponse.json({ summary, report });
+  return NextResponse.json({ session: report?.session ?? null, summary, report });
 }
 
 /**

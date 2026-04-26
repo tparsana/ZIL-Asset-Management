@@ -10,12 +10,31 @@ import {
   assetInclude,
   auditScanInclude,
   eventInclude,
+  apiAuditStatusByDb,
   toAsset,
   toAuditScan,
   toEvent,
   toLocation,
 } from '@/lib/services/mappers';
 import { parseQrPayload } from '@/lib/qr';
+
+export async function listAuditSessions() {
+  const sessions = await prisma.auditSession.findMany({
+    include: { location: true },
+    orderBy: [{ startedAt: 'desc' }],
+  });
+
+  return sessions.map((session) => ({
+    id: session.id,
+    locationId: session.locationId,
+    location: toLocation(session.location),
+    startedAt: session.startedAt.toISOString(),
+    completedAt: session.completedAt?.toISOString() ?? null,
+    startedBy: session.startedBy,
+    status: apiAuditStatusByDb[session.status],
+    notes: session.notes,
+  }));
+}
 
 export async function startAudit(input: { locationId: string; startedBy?: string; notes?: string }) {
   const session = await prisma.$transaction(async (tx) => {
