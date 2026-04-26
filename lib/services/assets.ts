@@ -240,6 +240,10 @@ export async function applyAssetAction(id: string, input: z.infer<typeof assetAc
     const current = await getAssetRecordById(tx, id);
     if (!current) return null;
 
+    if ((input.action === 'checkout' || input.action === 'return') && !input.handledBy?.trim()) {
+      throw new Error('Handled by is required');
+    }
+
     if ((input.action === 'checkout' || input.action === 'move') && !input.toLocationId) {
       throw new Error('Destination location is required');
     }

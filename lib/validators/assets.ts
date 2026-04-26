@@ -22,6 +22,8 @@ const optionalString = z
   .optional()
   .transform((value) => (value ? value : undefined));
 
+const requiredString = z.string().trim().min(1);
+
 const optionalDateString = optionalString.refine((value) => !value || !Number.isNaN(Date.parse(value)), {
   message: 'Purchase date must be a valid date',
 });
@@ -67,7 +69,7 @@ export const assetActionSchema = z.object({
 export const scanAssetActionSchema = z.object({
   action: z.enum(['checkout', 'return']),
   toLocationId: optionalString,
-  handledBy: optionalString,
+  handledBy: requiredString,
   remarks: optionalString,
 });
 
@@ -94,7 +96,7 @@ export const listEventsSchema = z.object({
 
 export const startAuditSchema = z.object({
   locationId: z.string().trim().min(1, 'Location is required'),
-  startedBy: optionalString,
+  startedBy: requiredString,
   notes: optionalString,
 });
 
@@ -106,6 +108,6 @@ export const batchActionSchema = z.object({
   assetIds: z.array(z.string().trim().min(1)).min(1, 'Select at least one asset'),
   action: z.enum(['checkout', 'return']),
   toLocationId: optionalString,
-  handledBy: optionalString,
+  handledBy: requiredString,
   remarks: optionalString,
 });

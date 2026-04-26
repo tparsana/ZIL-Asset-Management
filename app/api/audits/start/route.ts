@@ -15,6 +15,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const audit = await startAudit(parsed.data);
-  return NextResponse.json(audit, { status: 201 });
+  try {
+    const audit = await startAudit(parsed.data);
+    return NextResponse.json(audit, { status: 201 });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to start audit';
+    return NextResponse.json({ error: message }, { status: 400 });
+  }
 }

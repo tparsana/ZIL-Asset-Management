@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { completeAudit, getAuditSummary, scanAuditAsset } from '@/lib/services/audits';
+import { completeAudit, getAuditReport, getAuditSummary, scanAuditAsset } from '@/lib/services/audits';
 import { scanAuditSchema } from '@/lib/validators/assets';
 
 export const runtime = 'nodejs';
@@ -12,7 +12,8 @@ export async function GET(
   const summary = await getAuditSummary(id);
   if (!summary) return NextResponse.json({ error: 'Audit not found' }, { status: 404 });
 
-  return NextResponse.json({ summary });
+  const report = await getAuditReport(id, summary);
+  return NextResponse.json({ summary, report });
 }
 
 /**
@@ -49,6 +50,11 @@ export async function PUT(
 ) {
   const { id } = await params;
   const body = await request.json().catch(() => ({}));
-  const result = await completeAudit(id, body.handledBy);
-  return NextResponse.json(result);
+  try {
+    const result = await completeAudit(id, body.handledBy);
+    return NextResponse.json(result);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to complete audit';
+    return NextResponse.json({ error: message }, { status: 400 });
+  }
 }

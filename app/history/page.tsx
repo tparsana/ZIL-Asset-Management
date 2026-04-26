@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { cn } from '@/lib/utils';
 import { EmptyState } from '@/components/shared/empty-state';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -13,7 +14,21 @@ import {
 } from '@/components/ui/select';
 import type { AssetEvent, EventType } from '@/lib/types';
 import { formatDateTime, formatEventType } from '@/lib/format';
-import { Search, History } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+import {
+  AlertTriangle,
+  Archive,
+  ArrowRightLeft,
+  CheckCircle2,
+  ClipboardCheck,
+  Edit,
+  History,
+  LogIn,
+  LogOut,
+  Plus,
+  Search,
+  Wrench,
+} from 'lucide-react';
 
 const eventTypes: Array<{ value: EventType; label: string }> = [
   { value: 'asset-created', label: 'Asset Created' },
@@ -29,6 +44,102 @@ const eventTypes: Array<{ value: EventType; label: string }> = [
   { value: 'audit-scanned', label: 'Audit Scanned' },
   { value: 'audit-completed', label: 'Audit Completed' },
 ];
+
+const eventVisuals: Record<
+  EventType,
+  {
+    icon: LucideIcon;
+    iconClassName: string;
+    labelClassName: string;
+    rowClassName: string;
+  }
+> = {
+  'checked-out': {
+    icon: LogOut,
+    iconClassName: 'bg-status-in-use/15 text-status-in-use',
+    labelClassName: 'text-status-in-use',
+    rowClassName: 'border-status-in-use/20 bg-status-in-use/5',
+  },
+  returned: {
+    icon: LogIn,
+    iconClassName: 'bg-status-available/15 text-status-available',
+    labelClassName: 'text-status-available',
+    rowClassName: 'border-status-available/20 bg-status-available/5',
+  },
+  moved: {
+    icon: ArrowRightLeft,
+    iconClassName: 'bg-amber-500/12 text-amber-700',
+    labelClassName: 'text-amber-700',
+    rowClassName: 'border-amber-500/20 bg-amber-500/5',
+  },
+  'marked-missing': {
+    icon: AlertTriangle,
+    iconClassName: 'bg-status-missing/15 text-status-missing',
+    labelClassName: 'text-status-missing',
+    rowClassName: 'border-status-missing/20 bg-status-missing/5',
+  },
+  'asset-created': {
+    icon: Plus,
+    iconClassName: 'bg-status-available/15 text-status-available',
+    labelClassName: 'text-status-available',
+    rowClassName: 'border-status-available/20 bg-status-available/5',
+  },
+  'asset-updated': {
+    icon: Edit,
+    iconClassName: 'bg-muted text-muted-foreground',
+    labelClassName: 'text-foreground',
+    rowClassName: 'border-border bg-muted/25',
+  },
+  'marked-in-repair': {
+    icon: Wrench,
+    iconClassName: 'bg-status-repair/15 text-status-repair',
+    labelClassName: 'text-status-repair',
+    rowClassName: 'border-status-repair/20 bg-status-repair/5',
+  },
+  'restored-to-available': {
+    icon: CheckCircle2,
+    iconClassName: 'bg-status-available/15 text-status-available',
+    labelClassName: 'text-status-available',
+    rowClassName: 'border-status-available/20 bg-status-available/5',
+  },
+  retired: {
+    icon: Archive,
+    iconClassName: 'bg-muted text-muted-foreground',
+    labelClassName: 'text-foreground',
+    rowClassName: 'border-border bg-muted/25',
+  },
+  'audit-started': {
+    icon: ClipboardCheck,
+    iconClassName: 'bg-amber-500/12 text-amber-700',
+    labelClassName: 'text-amber-700',
+    rowClassName: 'border-amber-500/20 bg-amber-500/5',
+  },
+  'audit-scanned': {
+    icon: Search,
+    iconClassName: 'bg-amber-500/12 text-amber-700',
+    labelClassName: 'text-amber-700',
+    rowClassName: 'border-amber-500/20 bg-amber-500/5',
+  },
+  'audit-completed': {
+    icon: CheckCircle2,
+    iconClassName: 'bg-status-available/15 text-status-available',
+    labelClassName: 'text-status-available',
+    rowClassName: 'border-status-available/20 bg-status-available/5',
+  },
+};
+
+function getLocationSummary(event: AssetEvent) {
+  if (event.fromLocation && event.toLocation) {
+    if (event.fromLocation.id === event.toLocation.id) {
+      return event.toLocation.name;
+    }
+    return `${event.fromLocation.name} → ${event.toLocation.name}`;
+  }
+
+  if (event.toLocation) return event.toLocation.name;
+  if (event.fromLocation) return event.fromLocation.name;
+  return null;
+}
 
 export default function HistoryPage() {
   const [events, setEvents] = useState<AssetEvent[]>([]);
@@ -104,23 +215,53 @@ export default function HistoryPage() {
         </CardHeader>
         <CardContent className="max-h-[calc(100vh-18rem)] overflow-y-auto pr-3">
           {events.length > 0 ? (
-            <div className="space-y-2">
+            <div className="space-y-3">
               {events.map((event) => (
-                <div key={event.id} className="rounded-lg border p-4">
-                  <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-2">
-                    <div>
-                      <p className="font-medium">{formatEventType(event.eventType)}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {event.asset ? `${event.asset.name} (${event.asset.assetId})` : 'System event'}
-                        {event.fromLocation && event.toLocation && event.fromLocation.id !== event.toLocation.id
-                          ? ` · ${event.fromLocation.name} to ${event.toLocation.name}`
-                          : event.toLocation ? ` · ${event.toLocation.name}` : ''}
-                      </p>
-                      {event.remarks && <p className="text-sm mt-2">{event.remarks}</p>}
+                <div
+                  key={event.id}
+                  className={cn('rounded-xl border p-4 transition-colors', eventVisuals[event.eventType].rowClassName)}
+                >
+                  <div className="flex gap-4">
+                    <div
+                      className={cn(
+                        'flex h-10 w-10 shrink-0 items-center justify-center rounded-full',
+                        eventVisuals[event.eventType].iconClassName
+                      )}
+                    >
+                      {(() => {
+                        const Icon = eventVisuals[event.eventType].icon;
+                        return <Icon className="h-5 w-5" />;
+                      })()}
                     </div>
-                    <div className="text-sm text-muted-foreground md:text-right">
-                      <p>{formatDateTime(event.createdAt)}</p>
-                      {event.handledBy && <p>by {event.handledBy}</p>}
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between md:gap-6">
+                        <div className="min-w-0 space-y-3">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className={cn('text-sm font-semibold', eventVisuals[event.eventType].labelClassName)}>
+                              {formatEventType(event.eventType)}
+                            </span>
+                            <p className="min-w-0 text-sm font-medium text-foreground">
+                              {event.asset ? `${event.asset.name} (${event.asset.assetId})` : 'System event'}
+                            </p>
+                          </div>
+
+                          {getLocationSummary(event) && (
+                            <p className="text-sm text-muted-foreground">{getLocationSummary(event)}</p>
+                          )}
+
+                          {event.remarks && (
+                            <div className="rounded-lg border border-border/70 bg-background/70 px-3 py-2 text-sm text-foreground/90">
+                              {event.remarks}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="shrink-0 space-y-2 text-sm text-muted-foreground md:text-right">
+                          <p>{formatDateTime(event.createdAt)}</p>
+                          {event.handledBy && <p>by {event.handledBy}</p>}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>

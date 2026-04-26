@@ -1,5 +1,11 @@
 const QR_PREFIX = 'ZIL-ASSET';
 
+export function formatQrLabelAssetId(assetId: string) {
+  const normalized = assetId.trim().toUpperCase();
+  if (normalized.startsWith('ZIL-')) return normalized;
+  return `ZIL-${normalized}`;
+}
+
 export function createQrPayload(token: string) {
   return `${QR_PREFIX}:${token}`;
 }

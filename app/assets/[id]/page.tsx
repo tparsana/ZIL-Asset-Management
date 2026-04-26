@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { AssetThumbnail } from '@/components/shared/asset-thumbnail';
 import { QrCodeCard } from '@/components/shared/qr-code-card';
-import { ReferenceImageField, shortenImageUrl } from '@/components/shared/reference-image-field';
+import { ReferenceImageField } from '@/components/shared/reference-image-field';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { EmptyState } from '@/components/shared/empty-state';
 import {
@@ -196,7 +196,9 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
       </div>
 
       {asset ? (
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(320px,400px)] xl:gap-6">
+        <div className="space-y-4 xl:space-y-6">
+          <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(320px,400px)] xl:items-stretch xl:gap-6">
+            <div className="space-y-4 xl:flex xl:h-full xl:flex-col">
           <Card>
             <CardHeader>
               <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
@@ -358,59 +360,51 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
                     </div>
                   </div>
 
-                  {asset.referenceImageUrl && (
-                    <div className="rounded-lg border p-3">
-                      <p className="text-muted-foreground text-sm mb-3">Reference Image</p>
-                      <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
-                        <AssetThumbnail src={asset.referenceImageUrl} alt={asset.name} className="h-28 w-28 rounded-xl" />
-                        <Link href={asset.referenceImageUrl} className="min-w-0 truncate text-sm text-primary hover:underline">
-                          {shortenImageUrl(asset.referenceImageUrl)}
-                        </Link>
-                      </div>
-                    </div>
-                  )}
-
-                  {asset.notes && (
-                    <div className="rounded-lg border p-3">
-                      <p className="text-muted-foreground text-sm">Notes</p>
-                      <p className="mt-1">{asset.notes}</p>
-                    </div>
-                  )}
                 </>
               )}
             </CardContent>
           </Card>
+              {!editing && <Card className="hidden xl:block xl:flex-1" aria-hidden="true" />}
+            </div>
 
-          <div className="space-y-6">
-            <QrCodeCard asset={asset} onRegenerate={handleRegenerateQrCode} regenerating={regeneratingQr} />
-
-            <Card className="overflow-hidden">
-              <CardHeader>
-                <CardTitle>Event History</CardTitle>
-                <CardDescription>Immutable asset event log</CardDescription>
-              </CardHeader>
-              <CardContent className="max-h-[32rem] overflow-y-auto pr-3">
-                {events.length > 0 ? (
-                  <div className="space-y-3">
-                    {events.map((event) => (
-                      <div key={event.id} className="rounded-lg border p-3">
-                        <p className="font-medium">{formatEventType(event.eventType)}</p>
-                        <p className="text-sm text-muted-foreground">{formatDateTime(event.createdAt)}</p>
-                        {(event.fromLocation || event.toLocation) && (
-                          <p className="text-sm text-muted-foreground">
-                            {event.fromLocation?.name ?? 'None'} → {event.toLocation?.name ?? 'None'}
-                          </p>
-                        )}
-                        {event.remarks && <p className="text-sm mt-2">{event.remarks}</p>}
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">No events recorded for this asset yet.</p>
-                )}
-              </CardContent>
-            </Card>
+            <div>
+              <QrCodeCard asset={asset} onRegenerate={handleRegenerateQrCode} regenerating={regeneratingQr} />
+            </div>
           </div>
+
+          <Card className="overflow-hidden">
+            <CardHeader>
+              <CardTitle>Event History</CardTitle>
+              <CardDescription>Immutable asset event log</CardDescription>
+            </CardHeader>
+            <CardContent className="max-h-[32rem] overflow-y-auto pr-3">
+              {events.length > 0 ? (
+                <div className="space-y-3">
+                  {events.map((event) => (
+                    <div key={event.id} className="rounded-lg border p-4">
+                      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between lg:gap-8">
+                        <div className="min-w-0 space-y-2">
+                          <p className="font-medium">{formatEventType(event.eventType)}</p>
+                          {(event.fromLocation || event.toLocation) && (
+                            <p className="text-sm text-muted-foreground">
+                              {event.fromLocation?.name ?? 'None'} → {event.toLocation?.name ?? 'None'}
+                            </p>
+                          )}
+                          {event.remarks && <p className="text-sm leading-6">{event.remarks}</p>}
+                        </div>
+                        <div className="shrink-0 space-y-2 text-sm text-muted-foreground lg:text-right">
+                          <p>{formatDateTime(event.createdAt)}</p>
+                          {event.handledBy && <p>by {event.handledBy}</p>}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">No events recorded for this asset yet.</p>
+              )}
+            </CardContent>
+          </Card>
         </div>
       ) : (
         <Card>

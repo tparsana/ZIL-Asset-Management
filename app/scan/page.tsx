@@ -122,6 +122,11 @@ export default function ScanPage() {
       return;
     }
 
+    if (!handledBy.trim()) {
+      toast.error(batchMode ? 'Enter the staff member handling these assets' : 'Enter the staff member handling this asset');
+      return;
+    }
+
     setLoading(true);
     try {
       if (batchMode) {
@@ -375,7 +380,12 @@ export default function ScanPage() {
             )}
             <div className="space-y-2">
               <label className="text-sm font-medium">Handled By</label>
-              <Input value={handledBy} onChange={(event) => setHandledBy(event.target.value)} list="scan-users" placeholder="Optional staff name" />
+              <Input
+                value={handledBy}
+                onChange={(event) => setHandledBy(event.target.value)}
+                list="scan-users"
+                placeholder="Required staff name"
+              />
               <datalist id="scan-users">
                 {users.map((user) => <option key={user.id} value={user.name} />)}
               </datalist>
@@ -387,7 +397,7 @@ export default function ScanPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setActionModal(null)}>Cancel</Button>
-            <Button onClick={confirmAction} disabled={loading}>
+            <Button onClick={confirmAction} disabled={loading || !handledBy.trim()}>
               {actionModal ? actionCopy[actionModal].confirm : 'Confirm'}
             </Button>
           </DialogFooter>

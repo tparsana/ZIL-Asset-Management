@@ -5,8 +5,15 @@ import QRCode from 'qrcode';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { formatQrLabelAssetId } from '@/lib/qr';
 import type { Asset } from '@/lib/types';
-import { Download, QrCode, RefreshCcw } from 'lucide-react';
+import { ChevronDown, Download, QrCode, RefreshCcw } from 'lucide-react';
 
 interface QrCodeCardProps {
   asset: Asset;
@@ -16,16 +23,19 @@ interface QrCodeCardProps {
 
 export function QrCodeCard({ asset, onRegenerate, regenerating = false }: QrCodeCardProps) {
   const [labelDataUrl, setLabelDataUrl] = useState('');
+  const [qrOnlyDataUrl, setQrOnlyDataUrl] = useState('');
+  const [labelStripDataUrl, setLabelStripDataUrl] = useState('');
+  const qrLabelText = formatQrLabelAssetId(asset.assetId);
 
   useEffect(() => {
     let cancelled = false;
 
-    async function generateQrLabel() {
+    async function generateQrAssets() {
       try {
         const qrDataUrl = await QRCode.toDataURL(asset.qrCodePayload, {
           errorCorrectionLevel: 'M',
-          margin: 1,
-          width: 600,
+          margin: 0,
+          width: 640,
           color: {
             dark: '#2b0f14',
             light: '#ffffff',
@@ -36,45 +46,76 @@ export function QrCodeCard({ asset, onRegenerate, regenerating = false }: QrCode
         image.src = qrDataUrl;
         await image.decode();
 
-        const canvas = document.createElement('canvas');
-        const width = 640;
-        const qrSize = 600;
-        const topPadding = 6;
-        const textTop = topPadding + qrSize + 8;
-        canvas.width = width;
-        canvas.height = textTop + 54;
+        const singleCanvas = document.createElement('canvas');
+        const singleWidth = 640;
+        const singleQrSize = 640;
+        const singleTextTop = singleQrSize + 6;
+        singleCanvas.width = singleWidth;
+        singleCanvas.height = singleTextTop + 66;
 
-        const context = canvas.getContext('2d');
-        if (!context) throw new Error('Canvas is unavailable');
+        const singleContext = singleCanvas.getContext('2d');
+        if (!singleContext) throw new Error('Canvas is unavailable');
 
-        context.fillStyle = '#ffffff';
-        context.fillRect(0, 0, canvas.width, canvas.height);
-        context.drawImage(image, (width - qrSize) / 2, topPadding, qrSize, qrSize);
+        singleContext.fillStyle = '#ffffff';
+        singleContext.fillRect(0, 0, singleCanvas.width, singleCanvas.height);
+        singleContext.drawImage(image, 0, 0, singleQrSize, singleQrSize);
+        singleContext.fillStyle = '#2b0f14';
+        singleContext.textAlign = 'center';
+        singleContext.textBaseline = 'top';
+        singleContext.font = '700 50px Arial, sans-serif';
+        singleContext.fillText(qrLabelText, singleWidth / 2, singleTextTop);
 
-        context.fillStyle = '#2b0f14';
-        context.textAlign = 'center';
-        context.textBaseline = 'top';
-        context.font = '700 40px Arial, sans-serif';
-        context.fillText(asset.assetId, width / 2, textTop);
+        const stripCanvas = document.createElement('canvas');
+        const stripWidth = 1050;
+        const stripHeight = 266;
+        const copies = 4;
+        const cellWidth = stripWidth / copies;
+        const qrSize = 228;
+        const qrTop = 10;
+        const textTop = qrTop + qrSize;
+        stripCanvas.width = stripWidth;
+        stripCanvas.height = stripHeight;
 
-        if (!cancelled) setLabelDataUrl(canvas.toDataURL('image/png'));
+        const stripContext = stripCanvas.getContext('2d');
+        if (!stripContext) throw new Error('Canvas is unavailable');
+
+        stripContext.fillStyle = '#ffffff';
+        stripContext.fillRect(0, 0, stripCanvas.width, stripCanvas.height);
+        stripContext.imageSmoothingEnabled = false;
+        stripContext.fillStyle = '#111111';
+        stripContext.textAlign = 'center';
+        stripContext.textBaseline = 'top';
+        stripContext.font = '700 22px Arial, sans-serif';
+
+        for (let index = 0; index < copies; index += 1) {
+          const cellLeft = index * cellWidth;
+          const qrLeft = cellLeft + (cellWidth - qrSize) / 2;
+          stripContext.drawImage(image, qrLeft, qrTop, qrSize, qrSize);
+          stripContext.fillText(qrLabelText, cellLeft + cellWidth / 2, textTop);
+        }
+
+        if (!cancelled) {
+          setQrOnlyDataUrl(qrDataUrl);
+          setLabelDataUrl(singleCanvas.toDataURL('image/png'));
+          setLabelStripDataUrl(stripCanvas.toDataURL('image/png'));
+        }
       } catch {
         if (!cancelled) toast.error('Unable to generate QR code');
       }
     }
 
-    generateQrLabel();
+    generateQrAssets();
 
     return () => {
       cancelled = true;
     };
-  }, [asset.qrCodePayload, asset.assetId]);
+  }, [asset.qrCodePayload, qrLabelText]);
 
-  function downloadQrCode() {
-    if (!labelDataUrl) return;
+  function downloadPng(dataUrl: string, filename: string) {
+    if (!dataUrl) return;
     const link = document.createElement('a');
-    link.href = labelDataUrl;
-    link.download = `${asset.assetId}-qr-label.png`;
+    link.href = dataUrl;
+    link.download = filename;
     document.body.appendChild(link);
     link.click();
     link.remove();
@@ -92,7 +133,7 @@ export function QrCodeCard({ asset, onRegenerate, regenerating = false }: QrCode
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="rounded-xl border bg-white p-4">
+        <div className="rounded-xl border bg-white p-2">
           {labelDataUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={labelDataUrl} alt={`QR label for ${asset.assetId}`} className="mx-auto w-full max-w-72" />
@@ -103,15 +144,32 @@ export function QrCodeCard({ asset, onRegenerate, regenerating = false }: QrCode
           )}
         </div>
         <div className="space-y-1 text-xs text-muted-foreground">
-          <p>Label text: {asset.assetId}</p>
+          <p>Label text: {qrLabelText}</p>
           <p>Payload: {asset.qrCodePayload}</p>
           <p>Generated: {new Date(asset.qrCodeGeneratedAt).toLocaleString()}</p>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row">
-          <Button type="button" variant="outline" onClick={downloadQrCode} disabled={!labelDataUrl}>
-            <Download className="h-4 w-4 mr-2" />
-            Download Label PNG
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button type="button" variant="outline" disabled={!labelDataUrl || !labelStripDataUrl || !qrOnlyDataUrl}>
+                <Download className="mr-2 h-4 w-4" />
+                Downlabel Label
+                <ChevronDown className="ml-2 h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              <DropdownMenuItem
+                onSelect={() => downloadPng(labelDataUrl, `${asset.assetId}-qr-tag.png`)}
+              >
+                Download Single QR
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => downloadPng(labelStripDataUrl, `${asset.assetId}-tag-strip.png`)}
+              >
+                Download Label Strip
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           {onRegenerate && (
             <Button type="button" variant="outline" onClick={onRegenerate} disabled={regenerating}>
               <RefreshCcw className="h-4 w-4 mr-2" />

@@ -114,6 +114,27 @@ export interface AuditSummary {
   duplicateScans: AuditScan[];
 }
 
+export interface AuditReportMissingItem {
+  asset: Asset;
+  eventHistory: AssetEvent[];
+}
+
+export interface AuditReport {
+  generatedAt: string;
+  session: AuditSession;
+  location: Location;
+  totals: {
+    expectedAssets: number;
+    scans: number;
+    expectedFound: number;
+    missing: number;
+    unexpectedFound: number;
+    duplicateScans: number;
+  };
+  missingItems: AuditReportMissingItem[];
+  duplicateScans: AuditScan[];
+}
+
 export interface DashboardSummary {
   totals: {
     totalAssets: number;
