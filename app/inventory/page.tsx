@@ -137,7 +137,7 @@ export default function InventoryPage() {
               <div className="space-y-2">
                 <label className="text-sm font-medium">Asset Type</label>
                 <Select value={typeFilter} onValueChange={setTypeFilter}>
-                  <SelectTrigger className="h-8">
+                  <SelectTrigger className="h-8 max-w-full justify-start gap-1 px-2.5 pr-2 [&_svg]:ml-0.5">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -151,7 +151,7 @@ export default function InventoryPage() {
               <div className="space-y-2">
                 <label className="text-sm font-medium">Current Location</label>
                 <Select value={locationFilter} onValueChange={setLocationFilter}>
-                  <SelectTrigger className="h-8">
+                  <SelectTrigger className="h-8 max-w-full justify-start gap-1 px-2.5 pr-2 [&_svg]:ml-0.5">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>

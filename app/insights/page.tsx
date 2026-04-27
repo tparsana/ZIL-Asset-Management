@@ -340,23 +340,17 @@ export default function InsightsPage() {
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
-                  className="h-10 min-w-0 justify-between rounded-xl border-border bg-card px-4 text-left font-medium sm:w-auto sm:min-w-[20rem] sm:whitespace-nowrap"
+                  className="h-10 w-fit max-w-full flex-none justify-start gap-3 rounded-xl border-border bg-card pl-4 pr-3 text-left font-medium whitespace-nowrap"
                 >
-                  <span className="flex min-w-0 items-center gap-3">
-                    <CalendarRange className="h-4 w-4 shrink-0 text-muted-foreground" />
-                    <span className="truncate text-foreground">
-                      {formatDateRangeLabel(filters.fromDate, filters.toDate)}
-                    </span>
+                  <CalendarRange className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <span className="truncate text-foreground">
+                    {formatDateRangeLabel(filters.fromDate, filters.toDate)}
                   </span>
-                  <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <ChevronDown className="ml-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
                 </Button>
               </PopoverTrigger>
               <PopoverContent align="end" className="w-auto rounded-2xl p-3">
-                <div className="space-y-3">
-                  <div className="px-1">
-                    <p className="text-sm font-medium">Date Range</p>
-                    <p className="text-xs text-muted-foreground">Select the reporting window for all insights.</p>
-                  </div>
+                <div>
                   <Calendar
                     mode="range"
                     numberOfMonths={1}
@@ -393,7 +387,7 @@ export default function InsightsPage() {
                     value={filters.locationId}
                     onValueChange={(value) => setFilters((current) => ({ ...current, locationId: value }))}
                   >
-                    <SelectTrigger className="h-9">
+                    <SelectTrigger className="h-9 max-w-full justify-start gap-1 px-2.5 pr-2 [&_svg]:ml-0.5">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -413,7 +407,7 @@ export default function InsightsPage() {
                     value={filters.assetTypeId}
                     onValueChange={(value) => setFilters((current) => ({ ...current, assetTypeId: value }))}
                   >
-                    <SelectTrigger className="h-9">
+                    <SelectTrigger className="h-9 max-w-full justify-start gap-1 px-2.5 pr-2 [&_svg]:ml-0.5">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -435,7 +429,7 @@ export default function InsightsPage() {
                       setFilters((current) => ({ ...current, granularity: value as InsightsGranularity }))
                     }
                   >
-                    <SelectTrigger className="h-9">
+                    <SelectTrigger className="h-9 max-w-full justify-start gap-1 px-2.5 pr-2 [&_svg]:ml-0.5">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>

@@ -194,7 +194,7 @@ export default function HistoryPage() {
             />
           </div>
           <Select value={eventFilter} onValueChange={(value) => setEventFilter(value as EventType | 'all')}>
-            <SelectTrigger className="h-9 sm:w-52">
+            <SelectTrigger className="h-9 max-w-full justify-start gap-1 px-2.5 pr-2 sm:w-auto [&_svg]:ml-0.5">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
