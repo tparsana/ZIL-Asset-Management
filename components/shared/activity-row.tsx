@@ -1,5 +1,6 @@
 'use client';
 
+import { getEventAssetName } from '@/lib/event-display';
 import { cn } from '@/lib/utils';
 import type { AssetEvent, EventType } from '@/lib/types';
 import { 
@@ -38,6 +39,7 @@ const actionConfig: Record<EventType, { label: string; icon: React.ElementType; 
 export function ActivityRow({ activity, onClick, className }: ActivityRowProps) {
   const config = actionConfig[activity.eventType] || { label: activity.eventType, icon: HelpCircle, className: 'text-muted-foreground' };
   const Icon = config.icon;
+  const assetName = getEventAssetName(activity);
   
   return (
     <div 
@@ -53,7 +55,7 @@ export function ActivityRow({ activity, onClick, className }: ActivityRowProps) 
       <div className="flex-1 min-w-0">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <p className="font-medium text-sm truncate">{activity.asset?.name ?? 'System Event'}</p>
+            <p className="font-medium text-sm truncate">{assetName}</p>
             <p className="text-xs text-muted-foreground">
               {config.label}
               {activity.fromLocation && activity.toLocation && activity.fromLocation.id !== activity.toLocation.id && (

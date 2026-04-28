@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { cn } from '@/lib/utils';
+import { getEventAssetLabel } from '@/lib/event-display';
 import { EmptyState } from '@/components/shared/empty-state';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -242,7 +243,7 @@ export default function HistoryPage() {
                               {formatEventType(event.eventType)}
                             </span>
                             <p className="min-w-0 text-sm font-medium text-foreground">
-                              {event.asset ? `${event.asset.name} (${event.asset.assetId})` : 'System event'}
+                              {getEventAssetLabel(event)}
                             </p>
                           </div>
 

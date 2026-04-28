@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAssetById, retireAsset, updateAsset } from '@/lib/services/assets';
+import { deleteAsset, getAssetById, updateAsset } from '@/lib/services/assets';
 import { listEventsForAsset } from '@/lib/services/events';
 import { updateAssetSchema } from '@/lib/validators/assets';
 
@@ -50,7 +50,7 @@ export async function PATCH(
 
 /**
  * DELETE /api/assets/[id]
- * Delete/retire an asset
+ * Delete an asset
  */
 export async function DELETE(
   request: NextRequest,
@@ -58,7 +58,18 @@ export async function DELETE(
 ) {
   const { id } = await params;
   try {
-    const asset = await retireAsset(id);
+    let handledBy: string | undefined;
+    try {
+      const body = await request.json();
+      handledBy =
+        body && typeof body.handledBy === 'string' && body.handledBy.trim()
+          ? body.handledBy.trim()
+          : undefined;
+    } catch {
+      handledBy = undefined;
+    }
+
+    const asset = await deleteAsset(id, handledBy);
     if (!asset) return NextResponse.json({ error: 'Asset not found' }, { status: 404 });
 
     return NextResponse.json({ asset });

@@ -60,6 +60,33 @@ function dataFromCreateInput(input: z.infer<typeof createAssetSchema>, assetId: 
   };
 }
 
+function mergeJsonMetadata(
+  current: Prisma.JsonValue | null,
+  additions: Record<string, unknown>,
+): Prisma.InputJsonValue {
+  if (current && typeof current === 'object' && !Array.isArray(current)) {
+    return { ...(current as Prisma.InputJsonObject), ...additions } as Prisma.InputJsonObject;
+  }
+
+  return additions as Prisma.InputJsonObject;
+}
+
+function deletedAssetSnapshot(asset: AssetRecord) {
+  return {
+    id: asset.id,
+    assetId: asset.assetId,
+    name: asset.name,
+    assetTypeId: asset.assetTypeId,
+    assetTypeName: asset.assetType.name,
+    serialNumber: asset.serialNumber,
+    homeLocationId: asset.homeLocationId,
+    homeLocationName: asset.homeLocation.name,
+    currentLocationId: asset.currentLocationId,
+    currentLocationName: asset.currentLocation.name,
+    status: asset.status,
+  };
+}
+
 export async function listAssets(filters: z.infer<typeof listAssetsSchema>) {
   const where: Prisma.AssetWhereInput = filters.status ? {} : { status: { not: DbAssetStatus.RETIRED } };
 
@@ -313,6 +340,64 @@ export async function applyBatchAction(input: {
 
 export async function retireAsset(id: string, handledBy?: string) {
   return applyAssetAction(id, { action: 'retire', handledBy, remarks: 'Asset retired' });
+}
+
+export async function deleteAsset(id: string, handledBy?: string) {
+  return prisma.$transaction(async (tx) => {
+    const current = await getAssetRecordById(tx, id);
+    if (!current) return null;
+
+    const snapshot = deletedAssetSnapshot(current);
+    const existingEvents = await tx.assetEvent.findMany({
+      where: { assetId: current.id },
+      select: { id: true, metadata: true },
+    });
+
+    for (const event of existingEvents) {
+      await tx.assetEvent.update({
+        where: { id: event.id },
+        data: {
+          assetId: null,
+          metadata: mergeJsonMetadata(event.metadata, {
+            deletedAssetId: current.id,
+            deletedAssetSnapshot: snapshot,
+          }),
+        },
+      });
+    }
+
+    const deletedAuditScans = await tx.auditScan.deleteMany({
+      where: { assetId: current.id },
+    });
+
+    await tx.asset.delete({
+      where: { id: current.id },
+    });
+
+    await tx.assetEvent.create({
+      data: {
+        eventType: AssetEventType.RETIRED,
+        fromLocationId: current.currentLocationId,
+        toLocationId: current.currentLocationId,
+        previousStatus: current.status,
+        newStatus: DbAssetStatus.RETIRED,
+        handledBy,
+        remarks: 'Asset deleted from inventory',
+        metadata: {
+          assetDeleted: true,
+          deletedAssetId: current.id,
+          deletedAssetSnapshot: snapshot,
+          deletedAuditScanCount: deletedAuditScans.count,
+        },
+      },
+    });
+
+    return {
+      id: current.id,
+      assetId: current.assetId,
+      name: current.name,
+    };
+  });
 }
 
 export function statusLabel(status: AssetStatus) {
