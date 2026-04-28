@@ -49,9 +49,10 @@ export function QrCodeCard({ asset, onRegenerate, regenerating = false }: QrCode
         const singleCanvas = document.createElement('canvas');
         const singleWidth = 640;
         const singleQrSize = 640;
-        const singleTextTop = singleQrSize + 6;
+        const singleTextGap = 16;
+        const singleLabelBandTop = singleQrSize + singleTextGap;
         singleCanvas.width = singleWidth;
-        singleCanvas.height = singleTextTop + 66;
+        singleCanvas.height = singleLabelBandTop + 66;
 
         const singleContext = singleCanvas.getContext('2d');
         if (!singleContext) throw new Error('Canvas is unavailable');
@@ -61,9 +62,13 @@ export function QrCodeCard({ asset, onRegenerate, regenerating = false }: QrCode
         singleContext.drawImage(image, 0, 0, singleQrSize, singleQrSize);
         singleContext.fillStyle = '#2b0f14';
         singleContext.textAlign = 'center';
-        singleContext.textBaseline = 'top';
+        singleContext.textBaseline = 'middle';
         singleContext.font = '700 50px Arial, sans-serif';
-        singleContext.fillText(qrLabelText, singleWidth / 2, singleTextTop);
+        singleContext.fillText(
+          qrLabelText,
+          singleWidth / 2,
+          singleLabelBandTop + (singleCanvas.height - singleLabelBandTop) / 2,
+        );
 
         const stripCanvas = document.createElement('canvas');
         const stripWidth = 1050;
@@ -72,7 +77,8 @@ export function QrCodeCard({ asset, onRegenerate, regenerating = false }: QrCode
         const cellWidth = stripWidth / copies;
         const qrSize = 228;
         const qrTop = 10;
-        const textTop = qrTop + qrSize;
+        const stripTextGap = 8;
+        const labelBandTop = qrTop + qrSize + stripTextGap;
         stripCanvas.width = stripWidth;
         stripCanvas.height = stripHeight;
 
@@ -84,14 +90,18 @@ export function QrCodeCard({ asset, onRegenerate, regenerating = false }: QrCode
         stripContext.imageSmoothingEnabled = false;
         stripContext.fillStyle = '#111111';
         stripContext.textAlign = 'center';
-        stripContext.textBaseline = 'top';
+        stripContext.textBaseline = 'middle';
         stripContext.font = '700 22px Arial, sans-serif';
 
         for (let index = 0; index < copies; index += 1) {
           const cellLeft = index * cellWidth;
           const qrLeft = cellLeft + (cellWidth - qrSize) / 2;
           stripContext.drawImage(image, qrLeft, qrTop, qrSize, qrSize);
-          stripContext.fillText(qrLabelText, cellLeft + cellWidth / 2, textTop);
+          stripContext.fillText(
+            qrLabelText,
+            cellLeft + cellWidth / 2,
+            labelBandTop + (stripCanvas.height - labelBandTop) / 2,
+          );
         }
 
         if (!cancelled) {
