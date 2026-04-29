@@ -1,8 +1,9 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ChevronDown, LogOut } from 'lucide-react';
+import { BookOpen, ChevronDown, LogOut } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -99,7 +100,13 @@ export function AccountMenu({ sessionName, sessionEmail, onClose }: AccountMenuP
 
         <DropdownMenuSeparator className="mx-0 my-0" />
 
-        <div className="p-2">
+        <div className="space-y-1 p-2">
+          <DropdownMenuItem asChild className="rounded-xl px-3 py-3 text-base">
+            <Link href="/how-to-use" onClick={() => onClose?.()}>
+              <BookOpen className="h-4 w-4" />
+              How to Use
+            </Link>
+          </DropdownMenuItem>
           <DropdownMenuItem
             variant="destructive"
             disabled={isSigningOut}
