@@ -20,9 +20,9 @@ import {
   CalendarRange,
   ChevronDown,
   Clock3,
+  DollarSign,
   Filter,
   Package,
-  PackageCheck,
   ShieldAlert,
   type LucideIcon,
   Warehouse,
@@ -158,7 +158,7 @@ const kpiIcons = {
   mostUsedAsset: Boxes,
   mostUsedRoom: Building2,
   averageCheckoutDuration: Clock3,
-  itemsCurrentlyInUse: PackageCheck,
+  totalInventoryValue: DollarSign,
   missingUnresolvedItems: ShieldAlert,
   lowStockWatchlistCount: AlertTriangle,
 } satisfies Record<keyof InsightsResponse['overview'], LucideIcon>;
@@ -234,7 +234,7 @@ export default function InsightsPage() {
       { key: 'mostUsedAsset', title: 'Most Used Asset', metric: insights.overview.mostUsedAsset },
       { key: 'mostUsedRoom', title: 'Most Used Room', metric: insights.overview.mostUsedRoom },
       { key: 'averageCheckoutDuration', title: 'Average Checkout Duration', metric: insights.overview.averageCheckoutDuration },
-      { key: 'itemsCurrentlyInUse', title: 'Items Currently In Use', metric: insights.overview.itemsCurrentlyInUse },
+      { key: 'totalInventoryValue', title: 'Total Inventory Value', metric: insights.overview.totalInventoryValue },
       { key: 'missingUnresolvedItems', title: 'Missing / Unresolved Items', metric: insights.overview.missingUnresolvedItems },
       { key: 'lowStockWatchlistCount', title: 'Low Stock Watchlist Count', metric: insights.overview.lowStockWatchlistCount },
     ] as Array<{

@@ -163,6 +163,28 @@ function formatCountMetric(value: number, description: string, status: InsightMe
   };
 }
 
+function formatCurrencyMetric(value: number | null, description: string, status: InsightMetric['status'] = 'default'): InsightMetric {
+  if (value == null) {
+    return {
+      value: 'Not enough data yet',
+      rawValue: null,
+      description,
+      status: 'default',
+    };
+  }
+
+  return {
+    value: new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      maximumFractionDigits: 0,
+    }).format(value),
+    rawValue: value,
+    description,
+    status,
+  };
+}
+
 function formatDurationHours(hours: number | null | undefined) {
   if (hours == null || Number.isNaN(hours)) return 'Not enough data yet';
   if (hours >= 24) return `${(hours / 24).toFixed(1)}d`;
@@ -431,6 +453,10 @@ export function getInsightsOverview(context: InsightsContext): InsightsOverview 
     ? filteredPairs.reduce((sum, pair) => sum + pair.durationHours, 0) / filteredPairs.length
     : null;
 
+  const assetsWithCost = activeAssets.filter((asset) => typeof asset.cost === 'number');
+  const totalInventoryValue = assetsWithCost.length > 0
+    ? assetsWithCost.reduce((sum, asset) => sum + (asset.cost ?? 0), 0)
+    : null;
   const lowStockWatchlist = getInventoryPressureInsights(context).lowStockWatchlist;
 
   return {
@@ -478,9 +504,11 @@ export function getInsightsOverview(context: InsightsContext): InsightsOverview 
       description: filteredPairs.length > 0 ? 'Average time between checkout and return' : 'Need matched checkout and return events',
       status: averageDurationHours && averageDurationHours > OVERDUE_CHECKOUT_HOURS ? 'warning' : 'default',
     },
-    itemsCurrentlyInUse: formatCountMetric(
-      activeAssets.filter((asset) => asset.status === 'in-use').length,
-      'Items currently checked out',
+    totalInventoryValue: formatCurrencyMetric(
+      totalInventoryValue,
+      assetsWithCost.length > 0
+        ? `Recorded cost across ${assetsWithCost.length.toLocaleString()} active asset${assetsWithCost.length === 1 ? '' : 's'}`
+        : 'Add asset costs to calculate total inventory value',
       'info',
     ),
     missingUnresolvedItems: formatCountMetric(

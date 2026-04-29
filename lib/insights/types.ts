@@ -35,7 +35,7 @@ export interface InsightsOverview {
   mostUsedAsset: InsightMetric & { asset?: InsightMostUsedAsset | null };
   mostUsedRoom: InsightMetric & { room?: InsightMostUsedRoom | null };
   averageCheckoutDuration: InsightMetric;
-  itemsCurrentlyInUse: InsightMetric;
+  totalInventoryValue: InsightMetric;
   missingUnresolvedItems: InsightMetric;
   lowStockWatchlistCount: InsightMetric;
 }
