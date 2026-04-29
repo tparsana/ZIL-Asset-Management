@@ -9,7 +9,7 @@ export function CreatedCuriouslyCredit({ className }: CreatedCuriouslyCreditProp
   return (
     <p
       className={cn(
-        'text-center text-[10px] leading-none text-accent transition-colors',
+        'text-center text-[10px] leading-none text-[#d7d4cd] transition-colors',
         className,
       )}
     >
@@ -17,7 +17,7 @@ export function CreatedCuriouslyCredit({ className }: CreatedCuriouslyCreditProp
         href="https://www.tanishparsana.com"
         target="_blank"
         rel="noreferrer"
-        className="hover:text-accent/80"
+        className="hover:text-[#c8c4bc]"
       >
         Created Curiously by Tanish Parsana.
       </Link>
