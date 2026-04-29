@@ -11,7 +11,8 @@ import {
   Wrench, 
   Plus, 
   Edit, 
-  HelpCircle
+  HelpCircle,
+  Trash2,
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -28,6 +29,7 @@ const actionConfig: Record<EventType, { label: string; icon: React.ElementType; 
   'marked-missing': { label: 'Marked Missing', icon: AlertTriangle, className: 'text-status-missing' },
   'asset-created': { label: 'Asset Created', icon: Plus, className: 'text-status-available' },
   'asset-updated': { label: 'Asset Updated', icon: Edit, className: 'text-muted-foreground' },
+  'asset-deleted': { label: 'Deleted', icon: Trash2, className: 'text-status-missing' },
   'marked-in-repair': { label: 'Marked In Repair', icon: Wrench, className: 'text-status-repair' },
   'restored-to-available': { label: 'Restored to Available', icon: LogIn, className: 'text-status-available' },
   retired: { label: 'Retired', icon: Wrench, className: 'text-muted-foreground' },

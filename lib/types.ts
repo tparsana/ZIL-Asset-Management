@@ -3,6 +3,7 @@ export type AssetStatus = 'available' | 'in-use' | 'missing' | 'in-repair' | 're
 export type EventType =
   | 'asset-created'
   | 'asset-updated'
+  | 'asset-deleted'
   | 'moved'
   | 'checked-out'
   | 'returned'

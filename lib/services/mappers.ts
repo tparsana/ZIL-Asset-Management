@@ -15,6 +15,7 @@ import type {
   EventType,
   Location,
 } from '@/lib/types';
+import { isDeletedAssetEvent } from '@/lib/event-display';
 import { createQrPayload } from '@/lib/qr';
 
 export const assetInclude = {
@@ -67,35 +68,38 @@ export const apiStatusByDb: Record<DbAssetStatus, AssetStatus> = {
   [DbAssetStatus.RETIRED]: 'retired',
 };
 
-export const apiEventByDb: Record<AssetEventType, EventType> = {
-  [AssetEventType.ASSET_CREATED]: 'asset-created',
-  [AssetEventType.ASSET_UPDATED]: 'asset-updated',
-  [AssetEventType.MOVED]: 'moved',
-  [AssetEventType.CHECKED_OUT]: 'checked-out',
-  [AssetEventType.RETURNED]: 'returned',
-  [AssetEventType.MARKED_MISSING]: 'marked-missing',
-  [AssetEventType.MARKED_IN_REPAIR]: 'marked-in-repair',
-  [AssetEventType.RESTORED_TO_AVAILABLE]: 'restored-to-available',
-  [AssetEventType.RETIRED]: 'retired',
-  [AssetEventType.AUDIT_STARTED]: 'audit-started',
-  [AssetEventType.AUDIT_SCANNED]: 'audit-scanned',
-  [AssetEventType.AUDIT_COMPLETED]: 'audit-completed',
-};
+function toApiEventType(eventType: AssetEventType, metadata: Prisma.JsonValue | null): EventType {
+  if (eventType === AssetEventType.RETIRED && isDeletedAssetEvent(metadata)) {
+    return 'asset-deleted';
+  }
 
-export const dbEventByApi: Record<EventType, AssetEventType> = {
-  'asset-created': AssetEventType.ASSET_CREATED,
-  'asset-updated': AssetEventType.ASSET_UPDATED,
-  moved: AssetEventType.MOVED,
-  'checked-out': AssetEventType.CHECKED_OUT,
-  returned: AssetEventType.RETURNED,
-  'marked-missing': AssetEventType.MARKED_MISSING,
-  'marked-in-repair': AssetEventType.MARKED_IN_REPAIR,
-  'restored-to-available': AssetEventType.RESTORED_TO_AVAILABLE,
-  retired: AssetEventType.RETIRED,
-  'audit-started': AssetEventType.AUDIT_STARTED,
-  'audit-scanned': AssetEventType.AUDIT_SCANNED,
-  'audit-completed': AssetEventType.AUDIT_COMPLETED,
-};
+  switch (eventType) {
+    case AssetEventType.ASSET_CREATED:
+      return 'asset-created';
+    case AssetEventType.ASSET_UPDATED:
+      return 'asset-updated';
+    case AssetEventType.MOVED:
+      return 'moved';
+    case AssetEventType.CHECKED_OUT:
+      return 'checked-out';
+    case AssetEventType.RETURNED:
+      return 'returned';
+    case AssetEventType.MARKED_MISSING:
+      return 'marked-missing';
+    case AssetEventType.MARKED_IN_REPAIR:
+      return 'marked-in-repair';
+    case AssetEventType.RESTORED_TO_AVAILABLE:
+      return 'restored-to-available';
+    case AssetEventType.RETIRED:
+      return 'retired';
+    case AssetEventType.AUDIT_STARTED:
+      return 'audit-started';
+    case AssetEventType.AUDIT_SCANNED:
+      return 'audit-scanned';
+    case AssetEventType.AUDIT_COMPLETED:
+      return 'audit-completed';
+  }
+}
 
 export const apiAuditStatusByDb: Record<DbAuditStatus, AuditStatus> = {
   [DbAuditStatus.IN_PROGRESS]: 'in-progress',
@@ -153,7 +157,7 @@ export function toEvent(event: EventRecord): AssetEvent {
     id: event.id,
     assetId: event.assetId,
     asset: event.asset,
-    eventType: apiEventByDb[event.eventType],
+    eventType: toApiEventType(event.eventType, event.metadata),
     fromLocation: event.fromLocation ? toLocation(event.fromLocation) : null,
     toLocation: event.toLocation ? toLocation(event.toLocation) : null,
     previousStatus: event.previousStatus ? apiStatusByDb[event.previousStatus] : null,

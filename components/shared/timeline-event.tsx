@@ -11,7 +11,8 @@ import {
   Wrench, 
   Plus, 
   Edit, 
-  HelpCircle
+  HelpCircle,
+  Trash2,
 } from 'lucide-react';
 
 interface TimelineEventProps {
@@ -27,6 +28,7 @@ const actionConfig: Record<EventType, { label: string; icon: React.ElementType; 
   'marked-missing': { label: 'Marked Missing', icon: AlertTriangle, className: 'bg-status-missing/20 text-status-missing' },
   'asset-created': { label: 'Asset Created', icon: Plus, className: 'bg-status-available/20 text-status-available' },
   'asset-updated': { label: 'Asset Updated', icon: Edit, className: 'bg-muted text-muted-foreground' },
+  'asset-deleted': { label: 'Deleted', icon: Trash2, className: 'bg-status-missing/20 text-status-missing' },
   'marked-in-repair': { label: 'Marked In Repair', icon: Wrench, className: 'bg-status-repair/20 text-status-repair' },
   'restored-to-available': { label: 'Restored to Available', icon: LogIn, className: 'bg-status-available/20 text-status-available' },
   retired: { label: 'Retired', icon: Wrench, className: 'bg-muted text-muted-foreground' },

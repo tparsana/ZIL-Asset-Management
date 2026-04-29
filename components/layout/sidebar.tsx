@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { AppLogo } from '@/components/shared/app-logo';
+import { CreatedCuriouslyCredit } from '@/components/shared/created-curiously-credit';
 import { AccountMenu } from '@/components/layout/account-menu';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -90,8 +91,9 @@ export function Sidebar({ className, onClose, side = 'left', sessionName, sessio
       </ScrollArea>
 
       {/* Footer */}
-      <div className="border-t border-border p-4">
+      <div className="space-y-3 border-t border-border p-4">
         <AccountMenu sessionName={sessionName} sessionEmail={sessionEmail} onClose={onClose} />
+        <CreatedCuriouslyCredit />
       </div>
     </div>
   );

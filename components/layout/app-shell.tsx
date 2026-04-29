@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { Sidebar } from './sidebar';
 import { MobileNav } from './mobile-nav';
 import { Header } from './header';
+import { CreatedCuriouslyCredit } from '@/components/shared/created-curiously-credit';
 import { cn } from '@/lib/utils';
 
 interface AppShellProps {
@@ -51,8 +52,13 @@ export function AppShell({ children, sessionName, sessionEmail }: AppShellProps)
       {/* Main Content */}
       <div className="min-w-0 lg:pl-64">
         <Header onMenuClick={() => setSidebarOpen(true)} />
-        <main className="min-h-[calc(100vh-4rem)] pb-20 lg:pb-6">
-          {children}
+        <main className="flex min-h-[calc(100vh-4rem)] flex-col pb-20 lg:pb-6">
+          <div className="flex-1">
+            {children}
+          </div>
+          <div className="flex h-5 items-center justify-center px-4 pb-0 sm:px-5 lg:px-6">
+            <CreatedCuriouslyCredit />
+          </div>
         </main>
       </div>
 

@@ -380,7 +380,6 @@ export async function deleteAsset(id: string, handledBy?: string) {
         fromLocationId: current.currentLocationId,
         toLocationId: current.currentLocationId,
         previousStatus: current.status,
-        newStatus: DbAssetStatus.RETIRED,
         handledBy,
         remarks: 'Asset deleted from inventory',
         metadata: {

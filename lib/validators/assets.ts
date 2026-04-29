@@ -4,6 +4,7 @@ export const statusSchema = z.enum(['available', 'in-use', 'missing', 'in-repair
 export const eventTypeSchema = z.enum([
   'asset-created',
   'asset-updated',
+  'asset-deleted',
   'moved',
   'checked-out',
   'returned',

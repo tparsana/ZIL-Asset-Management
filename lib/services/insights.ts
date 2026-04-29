@@ -49,7 +49,8 @@ import type {
   InsightsRoomDemand,
   InsightsUsagePatterns,
 } from '@/lib/insights/types';
-import type { Asset, AssetStatus } from '@/lib/types';
+import type { Asset, AssetStatus, EventType } from '@/lib/types';
+import { isDeletedAssetEvent } from '@/lib/event-display';
 import { formatEventType } from '@/lib/format';
 import { assetInclude, toAsset, toLocation } from '@/lib/services/mappers';
 import { getAuditSummary } from '@/lib/services/audits';
@@ -233,7 +234,11 @@ function incrementCount(map: Map<string, number>, key: string, amount = 1) {
   map.set(key, (map.get(key) ?? 0) + amount);
 }
 
-function mapDbEventTypeToEventType(eventType: AssetEventType) {
+function mapDbEventTypeToEventType(eventType: AssetEventType, metadata?: Prisma.JsonValue | null) {
+  if (eventType === AssetEventType.RETIRED && isDeletedAssetEvent(metadata)) {
+    return 'asset-deleted' as const;
+  }
+
   switch (eventType) {
     case AssetEventType.ASSET_CREATED:
       return 'asset-created' as const;
@@ -824,30 +829,30 @@ export async function getRiskInsights(context: InsightsContext): Promise<Insight
 
   for (const event of context.periodEvents) {
     if (!eventTouchesLocation(event, context.filters.locationId)) continue;
-    incrementCount(eventCounts, event.eventType);
+    incrementCount(eventCounts, mapDbEventTypeToEventType(event.eventType, event.metadata));
   }
 
-  const orderedEventTypes: AssetEventType[] = [
-    AssetEventType.CHECKED_OUT,
-    AssetEventType.RETURNED,
-    AssetEventType.MOVED,
-    AssetEventType.ASSET_UPDATED,
-    AssetEventType.AUDIT_SCANNED,
-    AssetEventType.MARKED_MISSING,
-    AssetEventType.MARKED_IN_REPAIR,
-    AssetEventType.AUDIT_COMPLETED,
-    AssetEventType.ASSET_CREATED,
-    AssetEventType.AUDIT_STARTED,
-    AssetEventType.RESTORED_TO_AVAILABLE,
-    AssetEventType.RETIRED,
+  const orderedEventTypes: EventType[] = [
+    'checked-out',
+    'returned',
+    'moved',
+    'asset-updated',
+    'audit-scanned',
+    'marked-missing',
+    'marked-in-repair',
+    'audit-completed',
+    'asset-created',
+    'audit-started',
+    'restored-to-available',
+    'asset-deleted',
+    'retired',
   ];
 
   const eventTypeBreakdown: InsightEventTypeBreakdown[] = orderedEventTypes
     .map((eventType) => {
-      const mappedEventType = mapDbEventTypeToEventType(eventType);
       return {
-        eventType: mappedEventType,
-        label: formatEventType(mappedEventType),
+        eventType,
+        label: formatEventType(eventType),
         count: eventCounts.get(eventType) ?? 0,
       };
     })

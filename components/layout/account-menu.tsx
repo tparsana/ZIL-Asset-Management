@@ -30,24 +30,10 @@ function getProfileParts(name?: string | null) {
   };
 }
 
-function getInitials(name?: string | null, email?: string | null) {
-  const source = name?.trim() || email?.split('@')[0] || 'AU';
-  const parts = source
-    .replace(/[._-]+/g, ' ')
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean);
-
-  if (parts.length === 0) return 'AU';
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return `${parts[0][0] ?? ''}${parts[1][0] ?? ''}`.toUpperCase();
-}
-
 export function AccountMenu({ sessionName, sessionEmail, onClose }: AccountMenuProps) {
   const router = useRouter();
   const [isSigningOut, setIsSigningOut] = useState(false);
   const profile = useMemo(() => getProfileParts(sessionName), [sessionName]);
-  const initials = useMemo(() => getInitials(sessionName, sessionEmail), [sessionEmail, sessionName]);
 
   async function handleSignOut() {
     if (isSigningOut) return;
@@ -66,8 +52,8 @@ export function AccountMenu({ sessionName, sessionEmail, onClose }: AccountMenuP
 
   const avatar = (
     <Avatar className="h-12 w-12 shrink-0 border border-border/80">
-      <AvatarFallback className="bg-primary/8 text-base font-semibold text-primary">
-        {initials}
+      <AvatarFallback className="bg-primary/8 text-sm font-semibold tracking-[0.08em] text-primary">
+        ZIL
       </AvatarFallback>
     </Avatar>
   );
@@ -77,7 +63,7 @@ export function AccountMenu({ sessionName, sessionEmail, onClose }: AccountMenuP
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          className="flex w-full items-center gap-3 rounded-[1.75rem] border border-border/90 bg-background px-4 py-4 shadow-[0_8px_24px_rgba(15,23,42,0.06)] transition-colors hover:bg-accent/15 focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2"
+          className="flex w-full items-center gap-3 rounded-2xl border border-border/90 bg-background px-4 py-4 shadow-[0_8px_24px_rgba(15,23,42,0.06)] transition-colors hover:bg-accent/15 focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2"
           aria-label="Open account menu"
         >
           {avatar}
@@ -100,7 +86,7 @@ export function AccountMenu({ sessionName, sessionEmail, onClose }: AccountMenuP
         align="end"
         sideOffset={10}
         collisionPadding={16}
-        className="w-56 rounded-[1.5rem] border border-border/90 p-0 shadow-[0_20px_40px_rgba(15,23,42,0.12)]"
+        className="w-56 rounded-2xl border border-border/90 p-0 shadow-[0_20px_40px_rgba(15,23,42,0.12)]"
       >
         <div className="px-4 py-4">
           <DropdownMenuLabel className="px-0 pb-0 text-sm font-medium tracking-normal text-foreground">
@@ -117,7 +103,7 @@ export function AccountMenu({ sessionName, sessionEmail, onClose }: AccountMenuP
           <DropdownMenuItem
             variant="destructive"
             disabled={isSigningOut}
-            className="rounded-[1rem] px-3 py-3 text-base"
+            className="rounded-xl px-3 py-3 text-base"
             onSelect={(event) => {
               event.preventDefault();
               void handleSignOut();

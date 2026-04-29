@@ -22,6 +22,11 @@ export function getDeletedAssetSnapshot(metadata: unknown): DeletedAssetSnapshot
   };
 }
 
+export function isDeletedAssetEvent(metadata: unknown) {
+  if (!isRecord(metadata)) return false;
+  return metadata.assetDeleted === true;
+}
+
 export function getEventAssetName(event: Pick<AssetEvent, 'asset' | 'metadata'>) {
   if (event.asset?.name) return event.asset.name;
   return getDeletedAssetSnapshot(event.metadata)?.name ?? 'System Event';

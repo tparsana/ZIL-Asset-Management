@@ -34,6 +34,7 @@ import {
 const eventTypes: Array<{ value: EventType; label: string }> = [
   { value: 'asset-created', label: 'Asset Created' },
   { value: 'asset-updated', label: 'Asset Updated' },
+  { value: 'asset-deleted', label: 'Asset Deleted' },
   { value: 'moved', label: 'Moved' },
   { value: 'checked-out', label: 'Checked Out' },
   { value: 'returned', label: 'Returned' },
@@ -90,6 +91,12 @@ const eventVisuals: Record<
     iconClassName: 'bg-muted text-muted-foreground',
     labelClassName: 'text-foreground',
     rowClassName: 'border-border bg-muted/25',
+  },
+  'asset-deleted': {
+    icon: Archive,
+    iconClassName: 'bg-status-missing/15 text-status-missing',
+    labelClassName: 'text-status-missing',
+    rowClassName: 'border-status-missing/20 bg-status-missing/5',
   },
   'marked-in-repair': {
     icon: Wrench,

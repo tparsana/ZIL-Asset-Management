@@ -15,6 +15,7 @@ export function formatEventType(eventType: EventType) {
   const labels: Record<EventType, string> = {
     'asset-created': 'Asset Created',
     'asset-updated': 'Asset Updated',
+    'asset-deleted': 'Asset Deleted',
     moved: 'Moved',
     'checked-out': 'Checked Out',
     returned: 'Returned',
