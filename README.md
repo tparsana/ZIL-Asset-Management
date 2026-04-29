@@ -48,32 +48,7 @@ Seed data creates:
 - Locations: Room 140, Room 135, Room 134, Room 133, ZIL Store, Upstairs Storage.
 - Asset types: Camera, Battery, SD Card, Tripod, Microphone, Cable, Light, Accessory.
 
-No fake assets are seeded.
-
-## Reset To Launch State
-
-If you want to go live with a clean database while keeping the full schema and app features intact, reset only the operational data and then re-seed the baseline catalog:
-
-```bash
-CONFIRM_RESET=RESET_ZIL_ASSETS npm run prisma:reset-app-data
-```
-
-This reset:
-
-- deletes assets
-- deletes asset events / transaction logs
-- deletes audit sessions and audit scans
-- deletes app users from the handler list
-- clears and re-seeds the canonical locations and asset types
-
-This does **not**:
-
-- change the Prisma schema or migrations
-- remove code or features
-- touch your auth environment variables
-- delete uploaded files under `public/uploads/assets`
-
-Before running it, make sure `.env.local` or your production environment points at the exact database you want to wipe.
+These can be deleted, or edited later on.
 
 ## Routes
 
